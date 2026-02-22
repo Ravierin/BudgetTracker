@@ -1,0 +1,31 @@
+CREATE TABLE IF NOT EXISTS Position (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id TEXT NOT NULL UNIQUE,
+    exchange TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    cum_exit_value DECIMAL(10, 2) NOT NULL,
+    quantity DECIMAL(10, 2) NOT NULL,
+    leverage INT NOT NULL,
+    closed_pnl DECIMAL(10, 2) NOT NULL,
+    side TEXT NOT NULL,
+    date TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS Withdrawal (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    exchange TEXT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    currency TEXT NOT NULL,
+    date TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS MonthlyIncome (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    exchange TEXT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    pnl DECIMAL(10, 2) NOT NULL,
+    date TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
