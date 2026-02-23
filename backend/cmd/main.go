@@ -7,7 +7,9 @@ import (
 	"BudgetTracker/backend/pkg/config"
 	"BudgetTracker/backend/pkg/database"
 	"BudgetTracker/backend/pkg/server"
+	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -43,6 +45,14 @@ func main() {
 	go bybitSyncService.Start()
 	go mexcSyncService.Start()
 
+	httpServer := &http.Server{
+		Addr:         ":8080",
+		Handler:      srv.GetHandler(),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -50,10 +60,18 @@ func main() {
 		log.Println("Shutting down...")
 		bybitSyncService.Stop()
 		mexcSyncService.Stop()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(ctx); err != nil {
+			log.Printf("HTTP server shutdown error: %v", err)
+		}
 	}()
 
-	// Запуск сервера
-	if err := srv.Start("8080"); err != nil {
+	log.Println("Starting server on port 8080")
+	if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+
+	log.Println("Server stopped")
 }

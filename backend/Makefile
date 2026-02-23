@@ -4,11 +4,9 @@ include .env
 export
 
 BINARY_NAME=budget-tracker
-CMD_DIR=backend/cmd
-BACKEND_DIR=backend
 
 build:
-	cd $(BACKEND_DIR) && go build -o ../$(BINARY_NAME) ./cmd/main.go
+	go build -o $(BINARY_NAME) ./cmd/main.go
 
 run: build
 	./$(BINARY_NAME)
@@ -23,4 +21,4 @@ clean:
 	rm -f $(BINARY_NAME)
 
 test:
-	cd $(BACKEND_DIR) && go test ./...
+	go test ./...

@@ -25,7 +25,7 @@ func NewMEXClient(apiKey, apiSecret string) *MEXClient {
 	return &MEXClient{
 		apiKey:    apiKey,
 		apiSecret: apiSecret,
-		baseURL:   "https://contract.mexc.com",
+		baseURL:   "https://api.mexc.com",
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -84,7 +84,10 @@ func (m *MEXClient) doRequest(ctx context.Context, endpoint string, params map[s
 }
 
 func (m *MEXClient) GetPositions() ([]model.Position, error) {
-	ctx := context.Background()
+	return m.GetPositionsWithContext(context.Background())
+}
+
+func (m *MEXClient) GetPositionsWithContext(ctx context.Context) ([]model.Position, error) {
 
 	params := map[string]string{
 		"page_size": "100",

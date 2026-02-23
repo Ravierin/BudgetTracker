@@ -19,12 +19,16 @@ func NewBybitClient(apiKey, apiSecretKey string) *BybitClient {
 }
 
 func (b *BybitClient) GetPositions() ([]model.Position, error) {
+	return b.GetPositionsWithContext(context.Background())
+}
+
+func (b *BybitClient) GetPositionsWithContext(ctx context.Context) ([]model.Position, error) {
 	params := map[string]interface{}{
 		"category": "linear",
 		"limit":    100,
 	}
 
-	result, err := b.bybit.NewClassicalBybitServiceWithParams(params).GetClosePnl(context.Background())
+	result, err := b.bybit.NewClassicalBybitServiceWithParams(params).GetClosePnl(ctx)
 	if err != nil {
 		return nil, err
 	}

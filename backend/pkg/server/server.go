@@ -52,6 +52,9 @@ func (s *Server) setupRoutes() {
 	s.router.Use(loggingMiddleware)
 	s.router.Use(corsMiddleware)
 
+	// Serve static files from frontend
+	s.router.PathPrefix("/").Handler(http.FileServer(http.Dir("../frontend/dist")))
+
 	api := s.router.PathPrefix("/api/v1").Subrouter()
 
 	positionHandler := handler.NewPositionHandler(s.positionService, s.bybitClient, s.mexcClient, s.wsHub)
@@ -84,6 +87,10 @@ func (s *Server) Start(port string) error {
 	return http.ListenAndServe(":"+port, s.router)
 }
 
+func (s *Server) GetHandler() http.Handler {
+	return s.router
+}
+
 func (s *Server) GetWSHub() *websocket.Hub {
 	return s.wsHub
 }
@@ -100,7 +107,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS, PUT")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 		if r.Method == "OPTIONS" {
@@ -157,9 +164,10 @@ func (s *SyncService) Stop() {
 }
 
 func (s *SyncService) sync() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
 
-	positions, err := s.exchangeClient.GetPositions()
+	positions, err := s.exchangeClient.GetPositionsWithContext(ctx)
 	if err != nil {
 		log.Printf("Failed to sync positions from %s: %v", s.exchangeName, err)
 		return
