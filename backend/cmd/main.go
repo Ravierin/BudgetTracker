@@ -33,18 +33,23 @@ func main() {
 	incomeRepo := repository.NewMonthlyIncomeRepository(db)
 	incomeService := service.NewMonthlyIncomeService(incomeRepo)
 	bybitClient := api.NewBybitClient(cfg.BybitAPIKey, cfg.BybitAPISecretKey)
+	mexcClient := api.NewMEXClient(cfg.MEXCAPIKey, cfg.MEXCAPISecretKey)
 
-	srv := server.NewServer(positionService, withdrawalService, incomeService, bybitClient)
+	srv := server.NewServer(positionService, withdrawalService, incomeService, bybitClient, mexcClient)
 
-	syncService := server.NewSyncService(positionService, bybitClient, srv.GetWSHub(), 30*time.Second)
-	go syncService.Start()
+	bybitSyncService := server.NewSyncService(positionService, bybitClient, srv.GetWSHub(), 30*time.Second, "bybit")
+	mexcSyncService := server.NewSyncService(positionService, mexcClient, srv.GetWSHub(), 30*time.Second, "mexc")
+
+	go bybitSyncService.Start()
+	go mexcSyncService.Start()
 
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
 		log.Println("Shutting down...")
-		syncService.Stop()
+		bybitSyncService.Stop()
+		mexcSyncService.Stop()
 	}()
 
 	// Запуск сервера

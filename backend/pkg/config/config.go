@@ -16,6 +16,8 @@ type Config struct {
 	SSLMode           string
 	BybitAPIKey       string
 	BybitAPISecretKey string
+	MEXCAPIKey        string
+	MEXCAPISecretKey  string
 }
 
 func LoadConfig() (*Config, error) {
@@ -33,6 +35,8 @@ func LoadConfig() (*Config, error) {
 		SSLMode:           os.Getenv("DB_SSL_MODE"),
 		BybitAPIKey:       os.Getenv("BYBIT_API_KEY"),
 		BybitAPISecretKey: os.Getenv("BYBIT_SECRET_KEY"),
+		MEXCAPIKey:        os.Getenv("MEXC_API_KEY"),
+		MEXCAPISecretKey:  os.Getenv("MEXC_SECRET_KEY"),
 	}, nil
 }
 

@@ -20,6 +20,7 @@ type Server struct {
 	withdrawalService *service.WithdrawalService
 	incomeService     *service.MonthlyIncomeService
 	bybitClient       *api.BybitClient
+	mexcClient        *api.MEXClient
 	wsHub             *websocket.Hub
 }
 
@@ -28,6 +29,7 @@ func NewServer(
 	withdrawalService *service.WithdrawalService,
 	incomeService *service.MonthlyIncomeService,
 	bybitClient *api.BybitClient,
+	mexcClient *api.MEXClient,
 ) *Server {
 	hub := websocket.NewHub()
 	go hub.Run()
@@ -38,6 +40,7 @@ func NewServer(
 		withdrawalService: withdrawalService,
 		incomeService:     incomeService,
 		bybitClient:       bybitClient,
+		mexcClient:        mexcClient,
 		wsHub:             hub,
 	}
 
@@ -51,7 +54,7 @@ func (s *Server) setupRoutes() {
 
 	api := s.router.PathPrefix("/api/v1").Subrouter()
 
-	positionHandler := handler.NewPositionHandler(s.positionService, s.bybitClient, s.wsHub)
+	positionHandler := handler.NewPositionHandler(s.positionService, s.bybitClient, s.mexcClient, s.wsHub)
 	api.HandleFunc("/positions", positionHandler.GetAllPositions).Methods("GET")
 	api.HandleFunc("/positions/{id}", positionHandler.GetPosition).Methods("GET")
 	api.HandleFunc("/positions", positionHandler.CreatePosition).Methods("POST")
@@ -111,24 +114,27 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 type SyncService struct {
 	positionService *service.PositionService
-	bybitClient     *api.BybitClient
+	exchangeClient  api.ExchangeClient
 	wsHub           *websocket.Hub
 	interval        time.Duration
 	stopChan        chan struct{}
+	exchangeName    string
 }
 
 func NewSyncService(
 	positionService *service.PositionService,
-	bybitClient *api.BybitClient,
+	exchangeClient api.ExchangeClient,
 	wsHub *websocket.Hub,
 	interval time.Duration,
+	exchangeName string,
 ) *SyncService {
 	return &SyncService{
 		positionService: positionService,
-		bybitClient:     bybitClient,
+		exchangeClient:  exchangeClient,
 		wsHub:           wsHub,
 		interval:        interval,
 		stopChan:        make(chan struct{}),
+		exchangeName:    exchangeName,
 	}
 }
 
@@ -153,12 +159,14 @@ func (s *SyncService) Stop() {
 func (s *SyncService) sync() {
 	ctx := context.Background()
 
-	positions, err := s.bybitClient.GetPositions()
+	positions, err := s.exchangeClient.GetPositions()
 	if err != nil {
+		log.Printf("Failed to sync positions from %s: %v", s.exchangeName, err)
 		return
 	}
 
 	if err := s.positionService.SavePositionsBatch(ctx, positions); err != nil {
+		log.Printf("Failed to save positions from %s: %v", s.exchangeName, err)
 		return
 	}
 
@@ -166,6 +174,7 @@ func (s *SyncService) sync() {
 		"type":      "positions_update",
 		"positions": positions,
 		"count":     len(positions),
+		"exchange":  s.exchangeName,
 	}
 	s.wsHub.Broadcast(message)
 }
