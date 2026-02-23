@@ -3,15 +3,19 @@ package database
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/fs"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+	_ "github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
 
 type Database struct {
 	Pool *pgxpool.Pool
@@ -52,46 +56,20 @@ func runMigrations(connString string) error {
 		return fmt.Errorf("failed to create postgres driver: %w", err)
 	}
 
-	// Get absolute path to migrations directory
-	// Try multiple approaches to find migrations
-	var migrationsPath string
-	
-	// First, try current working directory
-	if cwd, err := os.Getwd(); err == nil {
-		if _, err := os.Stat(filepath.Join(cwd, "migrations")); err == nil {
-			migrationsPath = filepath.Join(cwd, "migrations")
-		}
-	}
-	
-	// If not found, try relative to executable
-	if migrationsPath == "" {
-		if execPath, err := os.Executable(); err == nil {
-			execDir := filepath.Dir(execPath)
-			paths := []string{
-				filepath.Join(execDir, "migrations"),
-				filepath.Join(execDir, "../migrations"),
-			}
-			for _, p := range paths {
-				if _, err := os.Stat(p); err == nil {
-					migrationsPath = p
-					break
-				}
-			}
-		}
-	}
-	
-	// Fallback to relative path
-	if migrationsPath == "" {
-		migrationsPath = "migrations"
+	// Use embedded migrations from io/fs
+	migrationsSubFS, err := fs.Sub(migrationsFS, "migrations")
+	if err != nil {
+		return fmt.Errorf("failed to get migrations subfs: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", migrationsPath),
-		"postgres",
-		driver,
-	)
+	_, err = iofs.New(migrationsSubFS, ".")
 	if err != nil {
-		return fmt.Errorf("failed to create migrate instance (path=%s): %w", migrationsPath, err)
+		return fmt.Errorf("failed to create migrate source: %w", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance("iofs", "postgres", driver)
+	if err != nil {
+		return fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
