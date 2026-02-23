@@ -53,33 +53,45 @@ func runMigrations(connString string) error {
 	}
 
 	// Get absolute path to migrations directory
-	execPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-	execDir := filepath.Dir(execPath)
+	// Try multiple approaches to find migrations
+	var migrationsPath string
 	
-	// Try multiple possible paths for migrations
-	migrationsPaths := []string{
-		filepath.Join(execDir, "migrations"),
-		filepath.Join(execDir, "../migrations"),
-		"migrations",
-	}
-
-	var m *migrate.Migrate
-	for _, path := range migrationsPaths {
-		m, err = migrate.NewWithDatabaseInstance(
-			fmt.Sprintf("file://%s", path),
-			"postgres",
-			driver,
-		)
-		if err == nil {
-			break
+	// First, try current working directory
+	if cwd, err := os.Getwd(); err == nil {
+		if _, err := os.Stat(filepath.Join(cwd, "migrations")); err == nil {
+			migrationsPath = filepath.Join(cwd, "migrations")
 		}
 	}
 	
+	// If not found, try relative to executable
+	if migrationsPath == "" {
+		if execPath, err := os.Executable(); err == nil {
+			execDir := filepath.Dir(execPath)
+			paths := []string{
+				filepath.Join(execDir, "migrations"),
+				filepath.Join(execDir, "../migrations"),
+			}
+			for _, p := range paths {
+				if _, err := os.Stat(p); err == nil {
+					migrationsPath = p
+					break
+				}
+			}
+		}
+	}
+	
+	// Fallback to relative path
+	if migrationsPath == "" {
+		migrationsPath = "migrations"
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		fmt.Sprintf("file://%s", migrationsPath),
+		"postgres",
+		driver,
+	)
 	if err != nil {
-		return fmt.Errorf("failed to create migrate instance: %w", err)
+		return fmt.Errorf("failed to create migrate instance (path=%s): %w", migrationsPath, err)
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
