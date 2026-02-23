@@ -19,7 +19,7 @@ func NewPositionRepository(db *database.Database) *PositionRepository {
 
 func (r *PositionRepository) SavePosition(ctx context.Context, position model.Position) error {
 	query := `
-		INSERT INTO "Position" (
+		INSERT INTO position (
 			order_id, exchange, symbol, cum_exit_value, quantity,
 			leverage, closed_pnl, side, date
 		) VALUES (
@@ -54,9 +54,9 @@ func (r *PositionRepository) SavePositionBatch(ctx context.Context, positions []
 	batch := &pgx.Batch{}
 
 	query := `
-		INSERT INTO "Position" (
+		INSERT INTO position (
 			order_id, exchange, symbol, cum_exit_value, quantity,
-			leverage, closed_pnl, order_type, date
+			leverage, closed_pnl, side, date
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9
 		)
@@ -100,7 +100,7 @@ func (r *PositionRepository) GetAllPositions(ctx context.Context) ([]model.Posit
 	query := `
 		SELECT id, order_id, exchange, symbol, cum_exit_value, quantity,
 		       leverage, closed_pnl, side, date
-		FROM "Position"
+		FROM position
 		ORDER BY date DESC
 	`
 
@@ -138,7 +138,7 @@ func (r *PositionRepository) GetPositionsByExchange(ctx context.Context, exchang
 	query := `
 		SELECT id, order_id, exchange, symbol, cum_exit_value, quantity,
 		       leverage, closed_pnl, side, date
-		FROM "Position"
+		FROM position
 		WHERE exchange = $1
 		ORDER BY date DESC
 	`
@@ -177,7 +177,7 @@ func (r *PositionRepository) GetPositionsByDateRange(ctx context.Context, start,
 	query := `
 		SELECT id, order_id, exchange, symbol, cum_exit_value, quantity,
 		       leverage, closed_pnl, side, date
-		FROM "Position"
+		FROM position
 		WHERE date BETWEEN $1 AND $2
 		ORDER BY date DESC
 	`
@@ -215,8 +215,8 @@ func (r *PositionRepository) GetPositionsByDateRange(ctx context.Context, start,
 func (r *PositionRepository) GetPositionByOrderID(ctx context.Context, orderID string) (*model.Position, error) {
 	query := `
 		SELECT id, order_id, exchange, symbol, cum_exit_value, quantity,
-		       leverage, closed_pnl, order_type, date
-		FROM "Position"
+		       leverage, closed_pnl, side, date
+		FROM position
 		WHERE order_id = $1
 	`
 
@@ -241,7 +241,7 @@ func (r *PositionRepository) GetPositionByOrderID(ctx context.Context, orderID s
 }
 
 func (r *PositionRepository) DeletePosition(ctx context.Context, id int) error {
-	query := `DELETE FROM "Position" WHERE id = $1`
+	query := `DELETE FROM position WHERE id = $1`
 	_, err := r.db.Pool.Exec(ctx, query, id)
 	return err
 }

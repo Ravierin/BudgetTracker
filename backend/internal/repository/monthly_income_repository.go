@@ -17,7 +17,7 @@ func NewMonthlyIncomeRepository(db *database.Database) *MonthlyIncomeRepository 
 
 func (r *MonthlyIncomeRepository) SaveMonthlyIncome(ctx context.Context, income model.MonthlyIncome) error {
 	query := `
-		INSERT INTO "MonthlyIncome" (exchange, amount, pnl, date)
+		INSERT INTO monthly_income (exchange, amount, pnl, date)
 		VALUES ($1, $2, $3, $4)
 	`
 	_, err := r.db.Pool.Exec(ctx, query,
@@ -32,7 +32,7 @@ func (r *MonthlyIncomeRepository) SaveMonthlyIncome(ctx context.Context, income 
 func (r *MonthlyIncomeRepository) GetAllMonthlyIncomes(ctx context.Context) ([]model.MonthlyIncome, error) {
 	query := `
 		SELECT id, exchange, amount, pnl, date
-		FROM "MonthlyIncome"
+		FROM monthly_income
 		ORDER BY date DESC
 	`
 	rows, err := r.db.Pool.Query(ctx, query)
@@ -56,7 +56,7 @@ func (r *MonthlyIncomeRepository) GetAllMonthlyIncomes(ctx context.Context) ([]m
 func (r *MonthlyIncomeRepository) GetIncomesByExchange(ctx context.Context, exchange string) ([]model.MonthlyIncome, error) {
 	query := `
 		SELECT id, exchange, amount, pnl, date
-		FROM "MonthlyIncome"
+		FROM monthly_income
 		WHERE exchange = $1
 		ORDER BY date DESC
 	`
@@ -81,7 +81,7 @@ func (r *MonthlyIncomeRepository) GetIncomesByExchange(ctx context.Context, exch
 func (r *MonthlyIncomeRepository) GetIncomesByDateRange(ctx context.Context, start, end time.Time) ([]model.MonthlyIncome, error) {
 	query := `
 		SELECT id, exchange, amount, pnl, date
-		FROM "MonthlyIncome"
+		FROM monthly_income
 		WHERE date BETWEEN $1 AND $2
 		ORDER BY date DESC
 	`
@@ -104,7 +104,7 @@ func (r *MonthlyIncomeRepository) GetIncomesByDateRange(ctx context.Context, sta
 }
 
 func (r *MonthlyIncomeRepository) DeleteMonthlyIncome(ctx context.Context, id int) error {
-	query := `DELETE FROM "MonthlyIncome" WHERE id = $1`
+	query := `DELETE FROM monthly_income WHERE id = $1`
 	_, err := r.db.Pool.Exec(ctx, query, id)
 	return err
 }

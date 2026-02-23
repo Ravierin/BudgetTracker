@@ -17,7 +17,7 @@ func NewWithdrawalRepository(db *database.Database) *WithdrawalRepository {
 
 func (r *WithdrawalRepository) SaveWithdrawal(ctx context.Context, withdrawal model.Withdrawal) error {
 	query := `
-		INSERT INTO "Withdrawal" (exchange, amount, currency, date)
+		INSERT INTO withdrawal (exchange, amount, currency, date)
 		VALUES ($1, $2, $3, $4)
 	`
 	_, err := r.db.Pool.Exec(ctx, query,
@@ -32,7 +32,7 @@ func (r *WithdrawalRepository) SaveWithdrawal(ctx context.Context, withdrawal mo
 func (r *WithdrawalRepository) GetAllWithdrawals(ctx context.Context) ([]model.Withdrawal, error) {
 	query := `
 		SELECT id, exchange, amount, currency, date
-		FROM "Withdrawal"
+		FROM withdrawal
 		ORDER BY date DESC
 	`
 	rows, err := r.db.Pool.Query(ctx, query)
@@ -56,7 +56,7 @@ func (r *WithdrawalRepository) GetAllWithdrawals(ctx context.Context) ([]model.W
 func (r *WithdrawalRepository) GetWithdrawalsByExchange(ctx context.Context, exchange string) ([]model.Withdrawal, error) {
 	query := `
 		SELECT id, exchange, amount, currency, date
-		FROM "Withdrawal"
+		FROM withdrawal
 		WHERE exchange = $1
 		ORDER BY date DESC
 	`
@@ -81,7 +81,7 @@ func (r *WithdrawalRepository) GetWithdrawalsByExchange(ctx context.Context, exc
 func (r *WithdrawalRepository) GetWithdrawalsByDateRange(ctx context.Context, start, end time.Time) ([]model.Withdrawal, error) {
 	query := `
 		SELECT id, exchange, amount, currency, date
-		FROM "Withdrawal"
+		FROM withdrawal
 		WHERE date BETWEEN $1 AND $2
 		ORDER BY date DESC
 	`
@@ -104,7 +104,7 @@ func (r *WithdrawalRepository) GetWithdrawalsByDateRange(ctx context.Context, st
 }
 
 func (r *WithdrawalRepository) DeleteWithdrawal(ctx context.Context, id int) error {
-	query := `DELETE FROM "Withdrawal" WHERE id = $1`
+	query := `DELETE FROM withdrawal WHERE id = $1`
 	_, err := r.db.Pool.Exec(ctx, query, id)
 	return err
 }
