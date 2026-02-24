@@ -13,6 +13,7 @@ export function Layout({ children }: LayoutProps) {
     { path: '/positions', label: 'Сделки', icon: 'bi-arrow-left-right' },
     { path: '/monthly-income', label: 'Месячный доход', icon: 'bi-graph-up' },
     { path: '/withdrawals', label: 'P2P', icon: 'bi-download' },
+    { path: '/settings', label: 'Настройки', icon: 'bi-gear' },
   ];
 
   return (
