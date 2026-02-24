@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"BudgetTracker/backend/internal/api"
 	"BudgetTracker/backend/internal/model"
 	"BudgetTracker/backend/internal/service"
 	"BudgetTracker/backend/pkg/websocket"
@@ -14,18 +13,14 @@ import (
 )
 
 type PositionHandler struct {
-	service     *service.PositionService
-	bybitClient *api.BybitClient
-	mexcClient  *api.MEXClient
-	wsHub       *websocket.Hub
+	service *service.PositionService
+	wsHub   *websocket.Hub
 }
 
-func NewPositionHandler(service *service.PositionService, bybitClient *api.BybitClient, mexcClient *api.MEXClient, wsHub *websocket.Hub) *PositionHandler {
+func NewPositionHandler(service *service.PositionService, wsHub *websocket.Hub) *PositionHandler {
 	return &PositionHandler{
-		service:     service,
-		bybitClient: bybitClient,
-		mexcClient:  mexcClient,
-		wsHub:       wsHub,
+		service: service,
+		wsHub:   wsHub,
 	}
 }
 
@@ -132,48 +127,5 @@ func (h *PositionHandler) DeletePosition(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *PositionHandler) SyncPositions(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	exchange := r.URL.Query().Get("exchange")
-	var positions []model.Position
-	var err error
-
-	switch exchange {
-	case "bybit":
-		positions, err = h.bybitClient.GetPositions()
-	case "mexc":
-		positions, err = h.mexcClient.GetPositions()
-	default:
-		bybitPositions, bybitErr := h.bybitClient.GetPositions()
-		mexcPositions, mexcErr := h.mexcClient.GetPositions()
-		if bybitErr != nil && mexcErr != nil {
-			http.Error(w, "Failed to sync from both exchanges", http.StatusInternalServerError)
-			return
-		}
-		positions = append(bybitPositions, mexcPositions...)
-	}
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := h.service.SavePositionsBatch(ctx, positions); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	h.wsHub.Broadcast(map[string]interface{}{
-		"type":      "positions_update",
-		"positions": positions,
-		"count":     len(positions),
-		"exchange":  exchange,
-	})
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":   "synced",
-		"count":    len(positions),
-		"exchange": exchange,
-	})
+	http.Error(w, "Use automatic sync every 30 seconds", http.StatusNotImplemented)
 }

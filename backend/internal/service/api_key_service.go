@@ -1,0 +1,31 @@
+package service
+
+import (
+	"BudgetTracker/backend/internal/model"
+	"BudgetTracker/backend/internal/repository"
+	"context"
+	"errors"
+)
+
+type APIKeyService struct {
+	repo *repository.APIKeyRepository
+}
+
+func NewAPIKeyService(repo *repository.APIKeyRepository) *APIKeyService {
+	return &APIKeyService{repo: repo}
+}
+
+func (s *APIKeyService) GetAPIKey(ctx context.Context, exchange string) (*model.APIKey, error) {
+	return s.repo.GetByExchange(ctx, exchange)
+}
+
+func (s *APIKeyService) SaveAPIKey(ctx context.Context, apiKey *model.APIKey) error {
+	if apiKey.APIKey == "" || apiKey.APISecret == "" {
+		return errors.New("API key and secret cannot be empty")
+	}
+	return s.repo.Upsert(ctx, apiKey)
+}
+
+func (s *APIKeyService) GetAllAPIKeys(ctx context.Context) ([]model.APIKey, error) {
+	return s.repo.GetAll(ctx)
+}

@@ -4,7 +4,6 @@ import (
 	"BudgetTracker/backend/internal/api"
 	"BudgetTracker/backend/internal/repository"
 	"BudgetTracker/backend/internal/service"
-	"BudgetTracker/backend/pkg/config"
 	"BudgetTracker/backend/pkg/database"
 	"BudgetTracker/backend/pkg/server"
 	"context"
@@ -17,12 +16,7 @@ import (
 )
 
 func main() {
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	db, err := database.NewDatabase(cfg.GetDSN())
+	db, err := database.NewDatabase("")
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -34,16 +28,23 @@ func main() {
 	withdrawalService := service.NewWithdrawalService(withdrawalRepo)
 	incomeRepo := repository.NewMonthlyIncomeRepository(db)
 	incomeService := service.NewMonthlyIncomeService(incomeRepo)
-	bybitClient := api.NewBybitClient(cfg.BybitAPIKey, cfg.BybitAPISecretKey)
-	mexcClient := api.NewMEXClient(cfg.MEXCAPIKey, cfg.MEXCAPISecretKey)
+	apiKeyRepo := repository.NewAPIKeyRepository(db)
+	apiKeyService := service.NewAPIKeyService(apiKeyRepo)
 
-	srv := server.NewServer(positionService, withdrawalService, incomeService, bybitClient, mexcClient)
+	// Create clients with empty keys - will be populated dynamically from DB
+	bybitClient := api.NewBybitClient("", "")
+	mexcClient := api.NewMEXClient("", "")
+	gateClient := api.NewGateClient("", "")
+	bitgetClient := api.NewBitgetClient("", "")
 
-	bybitSyncService := server.NewSyncService(positionService, bybitClient, srv.GetWSHub(), 30*time.Second, "bybit")
-	mexcSyncService := server.NewSyncService(positionService, mexcClient, srv.GetWSHub(), 30*time.Second, "mexc")
+	srv := server.NewServer(positionService, withdrawalService, incomeService, apiKeyService, bybitClient, mexcClient, gateClient, bitgetClient)
 
-	go bybitSyncService.Start()
-	go mexcSyncService.Start()
+	// Create sync services for all exchanges
+	exchanges := []string{"bybit", "mexc", "gate", "bitget"}
+	for _, exchangeName := range exchanges {
+		syncService := server.NewSyncService(positionService, apiKeyService, srv.GetWSHub(), 30*time.Second, exchangeName)
+		go syncService.Start()
+	}
 
 	httpServer := &http.Server{
 		Addr:         ":8080",
@@ -58,8 +59,6 @@ func main() {
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
 		log.Println("Shutting down...")
-		bybitSyncService.Stop()
-		mexcSyncService.Stop()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()

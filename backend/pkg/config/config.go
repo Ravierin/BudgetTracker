@@ -8,16 +8,12 @@ import (
 )
 
 type Config struct {
-	Host              string
-	Port              string
-	User              string
-	Password          string
-	Name              string
-	SSLMode           string
-	BybitAPIKey       string
-	BybitAPISecretKey string
-	MEXCAPIKey        string
-	MEXCAPISecretKey  string
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Name     string
+	SSLMode  string
 }
 
 func LoadConfig() (*Config, error) {
@@ -27,16 +23,12 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		Host:              os.Getenv("DB_HOST"),
-		Port:              os.Getenv("DB_PORT"),
-		User:              os.Getenv("DB_USER"),
-		Password:          os.Getenv("DB_PASSWORD"),
-		Name:              os.Getenv("DB_NAME"),
-		SSLMode:           os.Getenv("DB_SSL_MODE"),
-		BybitAPIKey:       os.Getenv("BYBIT_API_KEY"),
-		BybitAPISecretKey: os.Getenv("BYBIT_SECRET_KEY"),
-		MEXCAPIKey:        os.Getenv("MEXC_API_KEY"),
-		MEXCAPISecretKey:  os.Getenv("MEXC_SECRET_KEY"),
+		Host:     os.Getenv("DB_HOST"),
+		Port:     os.Getenv("DB_PORT"),
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		Name:     os.Getenv("DB_NAME"),
+		SSLMode:  os.Getenv("DB_SSL_MODE"),
 	}, nil
 }
 

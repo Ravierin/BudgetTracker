@@ -1,83 +1,140 @@
 import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  LayoutDashboard,
+  ArrowLeftRight,
+  TrendingUp,
+  Wallet,
+  Settings,
+  Zap,
+  Bitcoin,
+  Boxes,
+  DoorOpen
+} from 'lucide-react';
 import type { ReactNode } from 'react';
+import '../App.css';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
+const navItems = [
+  { path: '/', label: 'Дашборд', icon: LayoutDashboard },
+  { path: '/positions', label: 'Сделки', icon: ArrowLeftRight },
+  { path: '/monthly-income', label: 'Доход', icon: TrendingUp },
+  { path: '/withdrawals', label: 'Выводы', icon: Wallet },
+  { path: '/settings', label: 'Настройки', icon: Settings },
+];
+
+const exchanges = [
+  { id: 'mexc', name: 'MEXC', icon: Zap, color: '#00C076' },
+  { id: 'bybit', name: 'Bybit', icon: Boxes, color: '#F7A600' },
+  { id: 'gate', name: 'Gate', icon: DoorOpen, color: '#F0B90B' },
+  { id: 'bitget', name: 'Bitget', icon: Bitcoin, color: '#00D9FF' },
+];
+
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
 
-  const navItems = [
-    { path: '/', label: 'Дашборд', icon: 'bi-bar-chart' },
-    { path: '/positions', label: 'Сделки', icon: 'bi-arrow-left-right' },
-    { path: '/monthly-income', label: 'Месячный доход', icon: 'bi-graph-up' },
-    { path: '/withdrawals', label: 'P2P', icon: 'bi-download' },
-    { path: '/settings', label: 'Настройки', icon: 'bi-gear' },
-  ];
-
   return (
-    <div className="d-flex flex-column min-vh-100">
-      {/* Navigation */}
-      <nav className="navbar navbar-expand-lg">
-        <div className="container-fluid">
-          <Link to="/" className="navbar-brand text-decoration-none">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M14 14V4.06L7 11.06 5.5 9.56 0 15.12V14H14zM15 0H1C.45 0 0 .45 0 1v14c0 .55.45 1 1 1h14c.55 0 1-.45 1-1V1c0-.55-.45-1-1-1z"/>
-            </svg>
-            <div>
-              <div>Трейдинг Менеджер</div>
-              <div className="navbar-subtitle">Управление сделками MEXC</div>
-            </div>
-          </Link>
-
-          <button 
-            className="navbar-toggler" 
-            type="button" 
-            data-bs-toggle="collapse" 
-            data-bs-target="#navbarNav"
+    <div className="app-container">
+      {/* Sidebar */}
+      <motion.aside
+        className="sidebar"
+        initial={{ x: -300 }}
+        animate={{ x: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
+        {/* Logo */}
+        <div className="sidebar-header">
+          <motion.div
+            className="sidebar-logo"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            transition={{ type: 'spring', stiffness: 300 }}
           >
-            <span className="navbar-toggler-icon"></span>
-          </button>
-
-          <div className="collapse navbar-collapse justify-content-center" id="navbarNav">
-            <ul className="nav nav-pills">
-              {navItems.map((item) => (
-                <li className="nav-item" key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
-                  >
-                    <i className={`bi ${item.icon}`}></i>
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="d-flex">
-            <button className="btn btn-outline-secondary btn-icon">
-              <i className="bi bi-gear"></i>
-            </button>
+            ₿
+          </motion.div>
+          <div>
+            <div className="sidebar-title">Trading Manager</div>
+            <div className="sidebar-subtitle">Crypto Portfolio</div>
           </div>
         </div>
-      </nav>
+
+        {/* Navigation */}
+        <nav className="nav-menu">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            
+            return (
+              <Link key={item.path} to={item.path}>
+                <motion.div
+                  className={`nav-item ${isActive ? 'active' : ''}`}
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Icon className="nav-item-icon" />
+                  <span>{item.label}</span>
+                  {isActive && (
+                    <motion.div
+                      className="nav-indicator"
+                      layoutId="navIndicator"
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        width: 3,
+                        height: 20,
+                        background: 'white',
+                        borderRadius: '3px 0 0 3px',
+                      }}
+                    />
+                  )}
+                </motion.div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Exchange Status */}
+        <div className="exchange-badges">
+          {exchanges.map((ex) => {
+            const Icon = ex.icon;
+            return (
+              <motion.div
+                key={ex.id}
+                className="exchange-badge"
+                whileHover={{ scale: 1.05 }}
+                title={`${ex.name} - Connected`}
+              >
+                <Icon size={14} style={{ color: ex.color }} />
+                <span>{ex.name}</span>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* WebSocket Status */}
+        <motion.div
+          className="exchange-badge active"
+          style={{ marginTop: '12px' }}
+          animate={{ opacity: [1, 0.5, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <Zap size={14} />
+          <span>Live Sync</span>
+        </motion.div>
+      </motion.aside>
 
       {/* Main Content */}
-      <main className="main-content flex-grow-1">
-        {children}
+      <main className="main-content">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          {children}
+        </motion.div>
       </main>
-
-      {/* Footer */}
-      <footer className="footer">
-        <div className="d-flex justify-content-between align-items-center">
-          <span className="footer-text">
-            © 2026 Трейдинг Менеджер. Веб-приложение для управления сделками.
-          </span>
-          <span className="footer-text">MEXC API Integration</span>
-        </div>
-      </footer>
     </div>
   );
 }

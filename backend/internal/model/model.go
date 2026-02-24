@@ -30,3 +30,13 @@ type MonthlyIncome struct {
 	PNL       float64   `json:"pnl"`
 	CreatedAt time.Time `json:"date"`
 }
+
+type APIKey struct {
+	ID        int       `json:"id"`
+	Exchange  string    `json:"exchange"`
+	APIKey    string    `json:"apiKey"`
+	APISecret string    `json:"apiSecret"`
+	IsActive  bool      `json:"isActive"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}

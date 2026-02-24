@@ -3,6 +3,7 @@ package server
 import (
 	"BudgetTracker/backend/internal/api"
 	"BudgetTracker/backend/internal/handler"
+	"BudgetTracker/backend/internal/model"
 	"BudgetTracker/backend/internal/service"
 	"BudgetTracker/backend/pkg/websocket"
 	"context"
@@ -19,8 +20,7 @@ type Server struct {
 	positionService   *service.PositionService
 	withdrawalService *service.WithdrawalService
 	incomeService     *service.MonthlyIncomeService
-	bybitClient       *api.BybitClient
-	mexcClient        *api.MEXClient
+	apiKeyService     *service.APIKeyService
 	wsHub             *websocket.Hub
 }
 
@@ -28,8 +28,11 @@ func NewServer(
 	positionService *service.PositionService,
 	withdrawalService *service.WithdrawalService,
 	incomeService *service.MonthlyIncomeService,
+	apiKeyService *service.APIKeyService,
 	bybitClient *api.BybitClient,
 	mexcClient *api.MEXClient,
+	gateClient *api.GateClient,
+	bitgetClient *api.BitgetClient,
 ) *Server {
 	hub := websocket.NewHub()
 	go hub.Run()
@@ -39,8 +42,7 @@ func NewServer(
 		positionService:   positionService,
 		withdrawalService: withdrawalService,
 		incomeService:     incomeService,
-		bybitClient:       bybitClient,
-		mexcClient:        mexcClient,
+		apiKeyService:     apiKeyService,
 		wsHub:             hub,
 	}
 
@@ -52,12 +54,11 @@ func (s *Server) setupRoutes() {
 	s.router.Use(loggingMiddleware)
 	s.router.Use(corsMiddleware)
 
-	// Serve static files from frontend
 	s.router.PathPrefix("/").Handler(http.FileServer(http.Dir("../frontend/dist")))
 
 	api := s.router.PathPrefix("/api/v1").Subrouter()
 
-	positionHandler := handler.NewPositionHandler(s.positionService, s.bybitClient, s.mexcClient, s.wsHub)
+	positionHandler := handler.NewPositionHandler(s.positionService, s.wsHub)
 	api.HandleFunc("/positions", positionHandler.GetAllPositions).Methods("GET")
 	api.HandleFunc("/positions/{id}", positionHandler.GetPosition).Methods("GET")
 	api.HandleFunc("/positions", positionHandler.CreatePosition).Methods("POST")
@@ -73,6 +74,10 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/monthly-income", incomeHandler.GetAllMonthlyIncomes).Methods("GET")
 	api.HandleFunc("/monthly-income", incomeHandler.CreateMonthlyIncome).Methods("POST")
 	api.HandleFunc("/monthly-income/{id}", incomeHandler.DeleteMonthlyIncome).Methods("DELETE")
+
+	apiKeyHandler := handler.NewAPIKeyHandler(s.apiKeyService)
+	api.HandleFunc("/api-keys", apiKeyHandler.GetAPIKeys).Methods("GET")
+	api.HandleFunc("/api-keys", apiKeyHandler.SaveAPIKeys).Methods("POST")
 
 	api.HandleFunc("/ws", s.wsHub.HandleWebSocket)
 
@@ -121,27 +126,27 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 type SyncService struct {
 	positionService *service.PositionService
-	exchangeClient  api.ExchangeClient
+	apiKeyService   *service.APIKeyService
+	exchangeName    string
 	wsHub           *websocket.Hub
 	interval        time.Duration
 	stopChan        chan struct{}
-	exchangeName    string
 }
 
 func NewSyncService(
 	positionService *service.PositionService,
-	exchangeClient api.ExchangeClient,
+	apiKeyService *service.APIKeyService,
 	wsHub *websocket.Hub,
 	interval time.Duration,
 	exchangeName string,
 ) *SyncService {
 	return &SyncService{
 		positionService: positionService,
-		exchangeClient:  exchangeClient,
+		apiKeyService:   apiKeyService,
+		exchangeName:    exchangeName,
 		wsHub:           wsHub,
 		interval:        interval,
 		stopChan:        make(chan struct{}),
-		exchangeName:    exchangeName,
 	}
 }
 
@@ -167,7 +172,36 @@ func (s *SyncService) sync() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	positions, err := s.exchangeClient.GetPositionsWithContext(ctx)
+	apiKey, err := s.apiKeyService.GetAPIKey(ctx, s.exchangeName)
+	if err != nil {
+		log.Printf("No API key found for %s: %v", s.exchangeName, err)
+		return
+	}
+
+	if apiKey.APIKey == "" || apiKey.APISecret == "" {
+		log.Printf("API key not configured for %s", s.exchangeName)
+		return
+	}
+
+	var positions []model.Position
+	switch s.exchangeName {
+	case "bybit":
+		client := api.NewBybitClient(apiKey.APIKey, apiKey.APISecret)
+		positions, err = client.GetPositionsWithContext(ctx)
+	case "mexc":
+		client := api.NewMEXClient(apiKey.APIKey, apiKey.APISecret)
+		positions, err = client.GetPositionsWithContext(ctx)
+	case "gate":
+		client := api.NewGateClient(apiKey.APIKey, apiKey.APISecret)
+		positions, err = client.GetPositionsWithContext(ctx)
+	case "bitget":
+		client := api.NewBitgetClient(apiKey.APIKey, apiKey.APISecret)
+		positions, err = client.GetPositionsWithContext(ctx)
+	default:
+		log.Printf("Unknown exchange: %s", s.exchangeName)
+		return
+	}
+
 	if err != nil {
 		log.Printf("Failed to sync positions from %s: %v", s.exchangeName, err)
 		return

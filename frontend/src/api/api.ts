@@ -1,4 +1,4 @@
-import type { Position, Withdrawal, MonthlyIncome } from '../types';
+import type { Position, Withdrawal, MonthlyIncome, APIKey } from '../types';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
@@ -92,5 +92,20 @@ export const api = {
       method: 'DELETE',
     });
     return handleResponse<void>(response);
+  },
+
+  // API Keys
+  async getAPIKeys(): Promise<APIKey[]> {
+    const response = await fetch(`${API_BASE_URL}/api-keys`);
+    return handleResponse<APIKey[]>(response);
+  },
+
+  async saveAPIKeys(keys: APIKey[]): Promise<{ status: string }> {
+    const response = await fetch(`${API_BASE_URL}/api-keys`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(keys),
+    });
+    return handleResponse(response);
   },
 };

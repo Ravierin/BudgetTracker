@@ -33,3 +33,22 @@ export interface DashboardStats {
   monthlyPnl: number;
   totalTrades: number;
 }
+
+export interface APIKey {
+  id?: number;
+  exchange: string;
+  apiKey: string;
+  apiSecret: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ExchangeApiKey {
+  apiKey: string;
+  apiSecret: string;
+}
+
+export interface ExchangeApiKeys {
+  [exchangeId: string]: ExchangeApiKey;
+}
