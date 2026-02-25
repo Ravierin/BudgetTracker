@@ -1,0 +1,1 @@
+ALTER TABLE "position" ADD COLUMN margin DECIMAL(10, 2);

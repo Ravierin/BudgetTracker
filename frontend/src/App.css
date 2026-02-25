@@ -67,10 +67,10 @@
   padding: 14px 16px;
   border-radius: var(--border-radius);
   color: var(--text-secondary);
-  text-decoration: none;
+  text-decoration: none !important;
   transition: all 0.2s ease;
   cursor: pointer;
-  border: none;
+  border: none !important;
   background: transparent;
   font-size: 14px;
   font-weight: 500;
@@ -79,12 +79,22 @@
 .nav-item:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+  text-decoration: none !important;
 }
 
 .nav-item.active {
   background: var(--accent-gradient);
   color: var(--text-primary);
   box-shadow: var(--shadow-glow);
+  text-decoration: none !important;
+  border: none !important;
+}
+
+.nav-item *,
+.nav-item *::before,
+.nav-item *::after {
+  text-decoration: none !important;
+  border: none !important;
 }
 
 .nav-item-icon {
@@ -258,7 +268,7 @@
 
 /* ===== Tables ===== */
 .table-container {
-  background: var(--bg-card);
+  background: var(--bg-card) !important;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-lg);
   overflow: hidden;
@@ -267,34 +277,36 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  color: var(--text-primary) !important;
 }
 
 .table thead {
-  background: var(--bg-tertiary);
-}
-
-.table th {
-  padding: 16px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.table td {
-  padding: 16px;
+  background: var(--bg-tertiary) !important;
   border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
+}
+
+.table thead th {
+  color: var(--text-secondary) !important;
+  background: var(--bg-tertiary) !important;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table tbody td {
+  color: var(--text-primary) !important;
+  background: var(--bg-card) !important;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .table tbody tr {
   transition: background 0.2s ease;
 }
 
-.table tbody tr:hover {
-  background: var(--bg-hover);
+.table tbody tr:hover td {
+  background: var(--bg-hover) !important;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* Status badges */
@@ -360,6 +372,54 @@
 
 .form-input::placeholder {
   color: var(--text-muted);
+}
+
+/* Select styling */
+select.form-input {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 40px;
+  appearance: none;
+}
+
+select.form-input option {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  padding: 10px;
+}
+
+/* Date input styling */
+input[type="datetime-local"].form-input,
+input[type="date"].form-input,
+input[type="month"].form-input {
+  cursor: pointer;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Number input styling */
+input[type="number"].form-input {
+  -moz-appearance: textfield;
+}
+
+input[type="number"].form-input::-webkit-outer-spin-button,
+input[type="number"].form-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* ===== Buttons ===== */

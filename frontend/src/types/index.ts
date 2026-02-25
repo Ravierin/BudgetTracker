@@ -3,8 +3,8 @@ export interface Position {
   orderId: string;
   exchange: string;
   symbol: string;
-  cumExitValue: number;
-  qty: number;
+  volume: number;
+  margin: number;
   leverage: number;
   closedPnl: number;
   side: string;

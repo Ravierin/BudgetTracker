@@ -54,9 +54,11 @@ func (b *BybitClient) GetPositionsWithContext(ctx context.Context) ([]model.Posi
 		symbol, _ := posMap["symbol"].(string)
 		side, _ := posMap["side"].(string)
 
-		cumExitValue, _ := strconv.ParseFloat(posMap["cumExitValue"].(string), 64)
-		qty, _ := strconv.ParseFloat(posMap["closedSize"].(string), 64)
+		// Volume = cumEntryValue (position value at entry in USDT)
+		volume, _ := strconv.ParseFloat(posMap["cumEntryValue"].(string), 64)
 		leverage, _ := strconv.Atoi(posMap["leverage"].(string))
+		// Margin = Volume / Leverage (initial margin)
+		margin := volume / float64(leverage)
 		closedPnl, _ := strconv.ParseFloat(posMap["closedPnl"].(string), 64)
 
 		updatedTime, _ := strconv.ParseFloat(posMap["updatedTime"].(string), 64)
@@ -66,8 +68,8 @@ func (b *BybitClient) GetPositionsWithContext(ctx context.Context) ([]model.Posi
 			OrderID:      orderID,
 			Exchange:     "bybit",
 			Symbol:       symbol,
-			CumExitValue: cumExitValue,
-			Quantity:     qty,
+			Volume:       volume,
+			Margin:       margin,
 			Leverage:     leverage,
 			ClosedPnl:    closedPnl,
 			Side:         side,

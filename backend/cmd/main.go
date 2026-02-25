@@ -4,6 +4,7 @@ import (
 	"BudgetTracker/backend/internal/api"
 	"BudgetTracker/backend/internal/repository"
 	"BudgetTracker/backend/internal/service"
+	"BudgetTracker/backend/pkg/config"
 	"BudgetTracker/backend/pkg/database"
 	"BudgetTracker/backend/pkg/server"
 	"context"
@@ -16,7 +17,12 @@ import (
 )
 
 func main() {
-	db, err := database.NewDatabase("")
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	db, err := database.NewDatabase(cfg.GetDSN())
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

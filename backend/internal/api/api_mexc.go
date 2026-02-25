@@ -171,14 +171,17 @@ func (m *MEXClient) GetPositionsWithContext(ctx context.Context) ([]model.Positi
 			side = "Sell"
 		}
 
-		cumExitValue := pos.CloseAvgPrice * pos.CloseVol
+		// Volume = closeVol * closeAvgPrice (position value in USDT without leverage)
+		volume := pos.CloseVol * pos.CloseAvgPrice
+		// Margin = Volume / Leverage (initial margin)
+		margin := volume / float64(pos.Leverage)
 
 		positions = append(positions, model.Position{
 			OrderID:      fmt.Sprintf("%d", pos.PositionID),
 			Exchange:     "mexc",
 			Symbol:       pos.Symbol,
-			CumExitValue: cumExitValue,
-			Quantity:     pos.CloseVol,
+			Volume:       volume,
+			Margin:       margin,
 			Leverage:     pos.Leverage,
 			ClosedPnl:    pos.CloseProfitLoss,
 			Side:         side,

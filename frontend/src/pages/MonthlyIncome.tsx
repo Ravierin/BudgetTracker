@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { TrendingUp, DollarSign, Calendar } from 'lucide-react';
 import { api } from '../api/api';
 import { wsService, type WSMessage } from '../api/websocket';
 import type { MonthlyIncome } from '../types';
@@ -6,14 +8,7 @@ import type { MonthlyIncome } from '../types';
 export function MonthlyIncome() {
   const [incomes, setIncomes] = useState<MonthlyIncome[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   const [filterExchange, setFilterExchange] = useState<string>('');
-  const [formData, setFormData] = useState({
-    exchange: 'mexc',
-    amount: '',
-    pnl: '',
-    date: new Date().toISOString().split('T')[0],
-  });
 
   const loadIncomes = async () => {
     try {
@@ -38,39 +33,6 @@ export function MonthlyIncome() {
     return () => unsubscribe();
   }, [filterExchange]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.createMonthlyIncome({
-        exchange: formData.exchange,
-        amount: parseFloat(formData.amount),
-        pnl: parseFloat(formData.pnl),
-        date: new Date(formData.date).toISOString(),
-      });
-      setShowModal(false);
-      setFormData({
-        exchange: 'mexc',
-        amount: '',
-        pnl: '',
-        date: new Date().toISOString().split('T')[0],
-      });
-      await loadIncomes();
-    } catch (error) {
-      console.error('Failed to create income:', error);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (confirm('Вы уверены, что хотите удалить эту запись?')) {
-      try {
-        await api.deleteMonthlyIncome(id);
-        await loadIncomes();
-      } catch (error) {
-        console.error('Failed to delete income:', error);
-      }
-    }
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ru-RU', {
       style: 'currency',
@@ -83,7 +45,6 @@ export function MonthlyIncome() {
     return new Date(dateString).toLocaleDateString('ru-RU', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
     });
   };
 
@@ -92,63 +53,106 @@ export function MonthlyIncome() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h1 className="page-title mb-1">Месячный доход</h1>
-          <p className="page-subtitle mb-0">Статистика по месяцам</p>
-        </div>
-        <div className="d-flex gap-2">
-          <select
-            className="form-select"
-            style={{ width: 'auto' }}
-            value={filterExchange}
-            onChange={(e) => setFilterExchange(e.target.value)}
-          >
-            <option value="">Все биржи</option>
-            <option value="bybit">Bybit</option>
-            <option value="mexc">MEXC</option>
-          </select>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            <i className="bi bi-plus-lg"></i> Добавить
-          </button>
-        </div>
+      {/* Page Header */}
+      <div className="page-header">
+        <motion.h1
+          className="page-title"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          Месячный доход
+        </motion.h1>
+        <p className="page-subtitle">
+          Автоматический расчет дохода по сделкам
+        </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="stats-grid mb-4">
-        <div className="stat-card">
+      <div className="stats-grid">
+        <motion.div
+          className="stat-card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div className="stat-card-header">
             <span className="stat-card-title">Общий PnL</span>
-            <i className="bi bi-graph-up stat-card-icon"></i>
+            <div
+              className="stat-card-icon"
+              style={{ background: totalPnl >= 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
+            >
+              <TrendingUp size={20} color="white" />
+            </div>
           </div>
           <div className={`stat-card-value ${totalPnl >= 0 ? 'positive' : 'negative'}`}>
             {formatCurrency(totalPnl)}
           </div>
-          <div className="stat-card-subtitle">Все месяцы</div>
-        </div>
-        <div className="stat-card">
+          <div className="stat-card-subtitle">За все месяцы</div>
+        </motion.div>
+
+        <motion.div
+          className="stat-card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
           <div className="stat-card-header">
             <span className="stat-card-title">Общий объём</span>
-            <i className="bi bi-cash-stack stat-card-icon"></i>
+            <div
+              className="stat-card-icon"
+              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+            >
+              <DollarSign size={20} color="white" />
+            </div>
           </div>
           <div className="stat-card-value">{formatCurrency(totalAmount)}</div>
-          <div className="stat-card-subtitle">Все месяцы</div>
+          <div className="stat-card-subtitle">За все месяцы</div>
+        </motion.div>
+      </div>
+
+      {/* Filter */}
+      <div className="card">
+        <div className="card-header">
+          <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Calendar size={20} color="var(--accent-primary)" />
+            Фильтр по биржам
+          </h3>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            className={`btn ${filterExchange === '' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setFilterExchange('')}
+          >
+            Все биржи
+          </button>
+          {['mexc', 'bybit', 'gate', 'bitget'].map((ex) => (
+            <button
+              key={ex}
+              className={`btn ${filterExchange === ex ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setFilterExchange(ex)}
+            >
+              {ex.toUpperCase()}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* Table */}
       {loading ? (
-        <div className="d-flex justify-content-center py-5">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Загрузка...</span>
-          </div>
+        <div className="loading-spinner">
+          <div className="spinner" />
         </div>
       ) : incomes.length === 0 ? (
-        <div className="table-container p-5 text-center">
-          <i className="bi bi-inbox display-4 text-muted"></i>
-          <p className="text-muted mt-3 mb-0">Нет записей</p>
-          <button className="btn btn-primary mt-3" onClick={() => setShowModal(true)}>
-            Добавить первый доход
-          </button>
+        <div className="card">
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <Calendar size={48} color="var(--text-muted)" style={{ marginBottom: '16px' }} />
+            <h3 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>
+              Нет данных
+            </h3>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Месячный доход рассчитывается автоматически на основе ваших сделок
+            </p>
+          </div>
         </div>
       ) : (
         <div className="table-container">
@@ -159,113 +163,30 @@ export function MonthlyIncome() {
                 <th>Месяц</th>
                 <th>Объём</th>
                 <th>PnL</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
               {incomes.map((income) => (
-                <tr key={income.id}>
+                <motion.tr
+                  key={income.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  whileHover={{ background: 'var(--bg-hover)' }}
+                >
                   <td>
-                    <span className={`badge badge-bg-${income.exchange}`}>
-                      {income.exchange.toUpperCase()}
-                    </span>
+                    <span className="badge badge-info">{income.exchange.toUpperCase()}</span>
                   </td>
                   <td>{formatDate(income.date)}</td>
                   <td>{formatCurrency(income.amount)}</td>
                   <td>
-                    <span className={income.pnl >= 0 ? 'text-success' : 'text-danger'}>
+                    <span className={income.pnl >= 0 ? 'text-success' : 'text-danger'} style={{ fontWeight: '600' }}>
                       {income.pnl >= 0 ? '+' : ''}{formatCurrency(income.pnl)}
                     </span>
                   </td>
-                  <td>
-                    <button
-                      className="btn btn-outline-secondary btn-icon"
-                      onClick={() => handleDelete(income.id)}
-                    >
-                      <i className="bi bi-trash"></i>
-                    </button>
-                  </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* Modal */}
-      {showModal && (
-        <div className="modal fade show d-block" tabIndex={-1}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Добавить месячный доход</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowModal(false)}
-                ></button>
-              </div>
-              <form onSubmit={handleSubmit}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Биржа</label>
-                    <select
-                      className="form-select"
-                      value={formData.exchange}
-                      onChange={(e) => setFormData({ ...formData, exchange: e.target.value })}
-                    >
-                      <option value="mexc">MEXC</option>
-                      <option value="bybit">Bybit</option>
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Объём ($)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">PnL ($)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.pnl}
-                      onChange={(e) => setFormData({ ...formData, pnl: e.target.value })}
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Месяц</label>
-                    <input
-                      type="month"
-                      className="form-control"
-                      value={formData.date.slice(0, 7)}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value + '-01' })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => setShowModal(false)}
-                  >
-                    Отмена
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Добавить
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
         </div>
       )}
     </div>

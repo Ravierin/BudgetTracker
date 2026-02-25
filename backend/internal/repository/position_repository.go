@@ -20,14 +20,14 @@ func NewPositionRepository(db *database.Database) *PositionRepository {
 func (r *PositionRepository) SavePosition(ctx context.Context, position model.Position) error {
 	query := `
 		INSERT INTO position (
-			order_id, exchange, symbol, cum_exit_value, quantity,
+			order_id, exchange, symbol, volume, margin,
 			leverage, closed_pnl, side, date
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9
 		)
 		ON CONFLICT (order_id) DO UPDATE SET
-			cum_exit_value = EXCLUDED.cum_exit_value,
-			quantity = EXCLUDED.quantity,
+			volume = EXCLUDED.volume,
+			margin = EXCLUDED.margin,
 			leverage = EXCLUDED.leverage,
 			closed_pnl = EXCLUDED.closed_pnl,
 			side = EXCLUDED.side,
@@ -39,8 +39,8 @@ func (r *PositionRepository) SavePosition(ctx context.Context, position model.Po
 		position.OrderID,
 		position.Exchange,
 		position.Symbol,
-		position.CumExitValue,
-		position.Quantity,
+		position.Volume,
+		position.Margin,
 		position.Leverage,
 		position.ClosedPnl,
 		position.Side,
@@ -55,14 +55,14 @@ func (r *PositionRepository) SavePositionBatch(ctx context.Context, positions []
 
 	query := `
 		INSERT INTO position (
-			order_id, exchange, symbol, cum_exit_value, quantity,
+			order_id, exchange, symbol, volume, margin,
 			leverage, closed_pnl, side, date
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9
 		)
 		ON CONFLICT (order_id) DO UPDATE SET
-			cum_exit_value = EXCLUDED.cum_exit_value,
-			quantity = EXCLUDED.quantity,
+			volume = EXCLUDED.volume,
+			margin = EXCLUDED.margin,
 			leverage = EXCLUDED.leverage,
 			closed_pnl = EXCLUDED.closed_pnl,
 			side = EXCLUDED.side,
@@ -75,8 +75,8 @@ func (r *PositionRepository) SavePositionBatch(ctx context.Context, positions []
 			p.OrderID,
 			p.Exchange,
 			p.Symbol,
-			p.CumExitValue,
-			p.Quantity,
+			p.Volume,
+			p.Margin,
 			p.Leverage,
 			p.ClosedPnl,
 			p.Side,
@@ -98,7 +98,7 @@ func (r *PositionRepository) SavePositionBatch(ctx context.Context, positions []
 
 func (r *PositionRepository) GetAllPositions(ctx context.Context) ([]model.Position, error) {
 	query := `
-		SELECT id, order_id, exchange, symbol, cum_exit_value, quantity,
+		SELECT id, order_id, exchange, symbol, volume, margin,
 		       leverage, closed_pnl, side, date
 		FROM position
 		ORDER BY date DESC
@@ -118,8 +118,8 @@ func (r *PositionRepository) GetAllPositions(ctx context.Context) ([]model.Posit
 			&p.OrderID,
 			&p.Exchange,
 			&p.Symbol,
-			&p.CumExitValue,
-			&p.Quantity,
+			&p.Volume,
+			&p.Margin,
 			&p.Leverage,
 			&p.ClosedPnl,
 			&p.Side,
@@ -136,7 +136,7 @@ func (r *PositionRepository) GetAllPositions(ctx context.Context) ([]model.Posit
 
 func (r *PositionRepository) GetPositionsByExchange(ctx context.Context, exchange string) ([]model.Position, error) {
 	query := `
-		SELECT id, order_id, exchange, symbol, cum_exit_value, quantity,
+		SELECT id, order_id, exchange, symbol, volume, margin,
 		       leverage, closed_pnl, side, date
 		FROM position
 		WHERE exchange = $1
@@ -157,8 +157,8 @@ func (r *PositionRepository) GetPositionsByExchange(ctx context.Context, exchang
 			&p.OrderID,
 			&p.Exchange,
 			&p.Symbol,
-			&p.CumExitValue,
-			&p.Quantity,
+			&p.Volume,
+			&p.Margin,
 			&p.Leverage,
 			&p.ClosedPnl,
 			&p.Side,
@@ -175,7 +175,7 @@ func (r *PositionRepository) GetPositionsByExchange(ctx context.Context, exchang
 
 func (r *PositionRepository) GetPositionsByDateRange(ctx context.Context, start, end time.Time) ([]model.Position, error) {
 	query := `
-		SELECT id, order_id, exchange, symbol, cum_exit_value, quantity,
+		SELECT id, order_id, exchange, symbol, volume, margin,
 		       leverage, closed_pnl, side, date
 		FROM position
 		WHERE date BETWEEN $1 AND $2
@@ -196,8 +196,8 @@ func (r *PositionRepository) GetPositionsByDateRange(ctx context.Context, start,
 			&p.OrderID,
 			&p.Exchange,
 			&p.Symbol,
-			&p.CumExitValue,
-			&p.Quantity,
+			&p.Volume,
+			&p.Margin,
 			&p.Leverage,
 			&p.ClosedPnl,
 			&p.Side,
@@ -214,7 +214,7 @@ func (r *PositionRepository) GetPositionsByDateRange(ctx context.Context, start,
 
 func (r *PositionRepository) GetPositionByOrderID(ctx context.Context, orderID string) (*model.Position, error) {
 	query := `
-		SELECT id, order_id, exchange, symbol, cum_exit_value, quantity,
+		SELECT id, order_id, exchange, symbol, volume, margin,
 		       leverage, closed_pnl, side, date
 		FROM position
 		WHERE order_id = $1
@@ -226,8 +226,8 @@ func (r *PositionRepository) GetPositionByOrderID(ctx context.Context, orderID s
 		&p.OrderID,
 		&p.Exchange,
 		&p.Symbol,
-		&p.CumExitValue,
-		&p.Quantity,
+		&p.Volume,
+		&p.Margin,
 		&p.Leverage,
 		&p.ClosedPnl,
 		&p.Side,

@@ -6,37 +6,29 @@ import (
 	"BudgetTracker/backend/pkg/websocket"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
 )
 
 type MonthlyIncomeHandler struct {
-	service *service.MonthlyIncomeService
-	wsHub   *websocket.Hub
+	positionService *service.PositionService
+	wsHub           *websocket.Hub
 }
 
-func NewMonthlyIncomeHandler(service *service.MonthlyIncomeService, wsHub *websocket.Hub) *MonthlyIncomeHandler {
+func NewMonthlyIncomeHandler(positionService *service.PositionService, wsHub *websocket.Hub) *MonthlyIncomeHandler {
 	return &MonthlyIncomeHandler{
-		service: service,
-		wsHub:   wsHub,
+		positionService: positionService,
+		wsHub:           wsHub,
 	}
 }
 
 func (h *MonthlyIncomeHandler) GetAllMonthlyIncomes(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	exchange := r.URL.Query().Get("exchange")
-	var incomes []model.MonthlyIncome
-	var err error
 
-	if exchange != "" {
-		incomes, err = h.service.GetIncomesByExchange(ctx, exchange)
-	} else {
-		incomes, err = h.service.GetAllMonthlyIncomes(ctx)
-	}
-
+	// Aggregate monthly PnL from positions
+	incomes, err := h.positionService.AggregateMonthlyPnl(ctx, exchange)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -50,52 +42,28 @@ func (h *MonthlyIncomeHandler) GetAllMonthlyIncomes(w http.ResponseWriter, r *ht
 	json.NewEncoder(w).Encode(incomes)
 }
 
-func (h *MonthlyIncomeHandler) CreateMonthlyIncome(w http.ResponseWriter, r *http.Request) {
-	var income model.MonthlyIncome
-	if err := json.NewDecoder(r.Body).Decode(&income); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if income.CreatedAt.IsZero() {
-		income.CreatedAt = time.Now()
-	}
-
-	ctx := r.Context()
-	if err := h.service.SaveMonthlyIncome(ctx, income); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	h.wsHub.Broadcast(map[string]interface{}{
-		"type": "monthly_income_created",
-		"data": income,
-	})
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(income)
-}
-
-func (h *MonthlyIncomeHandler) DeleteMonthlyIncome(w http.ResponseWriter, r *http.Request) {
+func (h *MonthlyIncomeHandler) GetMonthlyIncome(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	id, err := time.Parse("2006-01", vars["id"])
 	if err != nil {
 		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
-	if err := h.service.DeleteMonthlyIncome(ctx, id); err != nil {
+	incomes, err := h.positionService.AggregateMonthlyPnl(ctx, "")
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	h.wsHub.Broadcast(map[string]interface{}{
-		"type":     "monthly_income_deleted",
-		"incomeId": id,
-	})
+	for _, income := range incomes {
+		if income.CreatedAt.Year() == id.Year() && income.CreatedAt.Month() == id.Month() {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(income)
+			return
+		}
+	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	http.Error(w, "Monthly income not found", http.StatusNotFound)
 }

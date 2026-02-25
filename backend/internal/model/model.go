@@ -7,8 +7,8 @@ type Position struct {
 	OrderID      string    `json:"orderId"`
 	Exchange     string    `json:"exchange"`
 	Symbol       string    `json:"symbol"`
-	CumExitValue float64   `json:"cumExitValue"`
-	Quantity     float64   `json:"qty"`
+	Volume       float64   `json:"volume"`
+	Margin       float64   `json:"margin"`
 	Leverage     int       `json:"leverage"`
 	ClosedPnl    float64   `json:"closedPnl"`
 	Side         string    `json:"side"`

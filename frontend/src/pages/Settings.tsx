@@ -63,18 +63,45 @@ export function Settings() {
     setSaving(true);
 
     try {
-      const apiKeys: APIKey[] = EXCHANGES.map(exchange => ({
-        exchange: exchange.id,
-        apiKey: keys[exchange.id]?.apiKey || '',
-        apiSecret: keys[exchange.id]?.apiSecret || '',
-      }));
+      // Send only exchanges where:
+      // 1. Both apiKey and apiSecret are filled
+      // 2. Keys are not masked (don't contain ****)
+      const apiKeys: APIKey[] = EXCHANGES
+        .filter(exchange => {
+          const keyData = keys[exchange.id];
+          if (!keyData) return false;
+          
+          const apiKey = keyData.apiKey || '';
+          const apiSecret = keyData.apiSecret || '';
+          
+          // Skip if either field is empty
+          if (apiKey.trim() === '' || apiSecret.trim() === '') return false;
+          
+          // Skip if keys are masked (unchanged from server)
+          if (apiKey.includes('****') || apiSecret.includes('****')) return false;
+          
+          return true;
+        })
+        .map(exchange => ({
+          exchange: exchange.id,
+          apiKey: keys[exchange.id]?.apiKey || '',
+          apiSecret: keys[exchange.id]?.apiSecret || '',
+        }));
+
+      console.log('Saving API keys:', apiKeys);
+
+      if (apiKeys.length === 0) {
+        setError('Заполните хотя бы одну пару ключей (или очистите форму)');
+        setSaving(false);
+        return;
+      }
 
       await api.saveAPIKeys(apiKeys);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError('Не удалось сохранить ключи');
-      console.error(err);
+      console.error('Save error:', err);
+      setError('Не удалось сохранить ключи: ' + (err as Error).message);
     } finally {
       setSaving(false);
     }

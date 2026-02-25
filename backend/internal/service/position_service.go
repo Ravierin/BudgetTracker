@@ -73,3 +73,51 @@ func (s *PositionService) CalculateMonthlyPnl(ctx context.Context, year int, mon
 
 	return totalPnl, nil
 }
+
+// AggregateMonthlyPnl aggregates PnL by month from positions
+// Returns monthly income data grouped by year-month
+func (s *PositionService) AggregateMonthlyPnl(ctx context.Context, exchange string) ([]model.MonthlyIncome, error) {
+	positions, err := s.repo.GetAllPositions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Group by year-month and exchange
+	monthlyMap := make(map[string]*model.MonthlyIncome)
+	
+	for _, p := range positions {
+		if exchange != "" && p.Exchange != exchange {
+			continue
+		}
+
+		// Get year-month key (e.g., "2026-01-mexc")
+		var key string
+		if exchange == "" {
+			key = p.UpdatedAt.Format("2006-01") + "-" + p.Exchange
+		} else {
+			key = p.UpdatedAt.Format("2006-01")
+		}
+		
+		monthStart := time.Date(p.UpdatedAt.Year(), p.UpdatedAt.Month(), 1, 0, 0, 0, 0, p.UpdatedAt.Location())
+		
+		if existing, ok := monthlyMap[key]; ok {
+			existing.PNL += p.ClosedPnl
+			existing.Amount += p.Volume
+		} else {
+			monthlyMap[key] = &model.MonthlyIncome{
+				Exchange:  p.Exchange,
+				PNL:       p.ClosedPnl,
+				Amount:    p.Volume,
+				CreatedAt: monthStart,
+			}
+		}
+	}
+
+	// Convert map to slice
+	result := make([]model.MonthlyIncome, 0, len(monthlyMap))
+	for _, income := range monthlyMap {
+		result = append(result, *income)
+	}
+
+	return result, nil
+}

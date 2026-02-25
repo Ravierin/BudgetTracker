@@ -4,7 +4,6 @@ import (
 	"BudgetTracker/backend/internal/model"
 	"BudgetTracker/backend/internal/repository"
 	"context"
-	"errors"
 )
 
 type APIKeyService struct {
@@ -20,9 +19,7 @@ func (s *APIKeyService) GetAPIKey(ctx context.Context, exchange string) (*model.
 }
 
 func (s *APIKeyService) SaveAPIKey(ctx context.Context, apiKey *model.APIKey) error {
-	if apiKey.APIKey == "" || apiKey.APISecret == "" {
-		return errors.New("API key and secret cannot be empty")
-	}
+	// Allow empty keys - user can configure exchanges gradually
 	return s.repo.Upsert(ctx, apiKey)
 }
 

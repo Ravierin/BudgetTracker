@@ -19,7 +19,7 @@ func (r *APIKeyRepository) GetByExchange(ctx context.Context, exchange string) (
 	query := `
 		SELECT id, exchange, api_key, api_secret, is_active, created_at, updated_at
 		FROM api_keys
-		WHERE exchange = $1 AND is_active = true
+		WHERE exchange = $1
 	`
 
 	var apiKey model.APIKey

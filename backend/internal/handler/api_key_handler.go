@@ -17,26 +17,14 @@ func NewAPIKeyHandler(service *service.APIKeyService) *APIKeyHandler {
 
 func (h *APIKeyHandler) GetAPIKeys(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	exchange := r.URL.Query().Get("exchange")
 
-	var apiKeys []model.APIKey
-	var err error
-
-	if exchange != "" {
-		key, err := h.service.GetAPIKey(ctx, exchange)
-		if err != nil {
-			http.Error(w, "API key not found", http.StatusNotFound)
-			return
-		}
-		apiKeys = []model.APIKey{*key}
-	} else {
-		apiKeys, err = h.service.GetAllAPIKeys(ctx)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	apiKeys, err := h.service.GetAllAPIKeys(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
+	// Don't expose actual secrets in response
 	for i := range apiKeys {
 		if apiKeys[i].APIKey != "" {
 			apiKeys[i].APIKey = maskString(apiKeys[i].APIKey)
@@ -59,9 +47,14 @@ func (h *APIKeyHandler) SaveAPIKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(keys) == 0 {
+		http.Error(w, "No API keys provided", http.StatusBadRequest)
+		return
+	}
+
 	for _, key := range keys {
 		if err := h.service.SaveAPIKey(ctx, &key); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to save key for "+key.Exchange+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}

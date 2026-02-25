@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  LayoutDashboard,
+  Home,
   ArrowLeftRight,
   TrendingUp,
   Wallet,
@@ -19,7 +19,7 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { path: '/', label: 'Дашборд', icon: LayoutDashboard },
+  { path: '/', label: 'Главная', icon: Home },
   { path: '/positions', label: 'Сделки', icon: ArrowLeftRight },
   { path: '/monthly-income', label: 'Доход', icon: TrendingUp },
   { path: '/withdrawals', label: 'Выводы', icon: Wallet },
@@ -75,20 +75,6 @@ export function Layout({ children }: LayoutProps) {
                 >
                   <Icon className="nav-item-icon" />
                   <span>{item.label}</span>
-                  {isActive && (
-                    <motion.div
-                      className="nav-indicator"
-                      layoutId="navIndicator"
-                      style={{
-                        position: 'absolute',
-                        right: 0,
-                        width: 3,
-                        height: 20,
-                        background: 'white',
-                        borderRadius: '3px 0 0 3px',
-                      }}
-                    />
-                  )}
                 </motion.div>
               </Link>
             );
