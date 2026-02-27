@@ -6,8 +6,10 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -81,6 +83,35 @@ func (b *BitgetClient) GetPositions() ([]model.Position, error) {
 
 func (b *BitgetClient) GetPositionsWithContext(ctx context.Context) ([]model.Position, error) {
 	return []model.Position{}, nil
+}
+
+// GetBalance returns total futures account balance in USDT
+func (b *BitgetClient) GetBalance(ctx context.Context) (float64, error) {
+	// Bitget futures balance endpoint
+	body, err := b.doRequest(ctx, "GET", "/api/v1/account/accounts", "", "")
+	if err != nil {
+		return 0, err
+	}
+	
+	var resp struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data struct {
+			USDT string `json:"USDT"`
+		} `json:"data"`
+	}
+	
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return 0, err
+	}
+	
+	if resp.Code != 0 {
+		return 0, fmt.Errorf("Bitget API error: %s", resp.Msg)
+	}
+	
+	balance, _ := strconv.ParseFloat(resp.Data.USDT, 64)
+	log.Printf("[bitget] Balance: %.2f USDT", balance)
+	return balance, nil
 }
 
 var _ ExchangeClient = (*BitgetClient)(nil)

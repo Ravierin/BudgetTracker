@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -81,6 +82,36 @@ func (g *GateClient) GetPositions() ([]model.Position, error) {
 
 func (g *GateClient) GetPositionsWithContext(ctx context.Context) ([]model.Position, error) {
 	return []model.Position{}, nil
+}
+
+// GetBalance returns total futures account balance in USDT
+func (g *GateClient) GetBalance(ctx context.Context) (float64, error) {
+	// Gate.io futures balance endpoint
+	body, err := g.doRequest(ctx, "GET", "/futures/usdt/accounts", "")
+	if err != nil {
+		return 0, err
+	}
+	
+	var accounts []struct {
+		Currency  string `json:"currency"`
+		Available string `json:"available"`
+		Pnl       string `json:"unrealised_pnl"`
+	}
+	
+	if err := json.Unmarshal(body, &accounts); err != nil {
+		return 0, err
+	}
+	
+	var totalBalance float64
+	for _, acc := range accounts {
+		if acc.Currency == "USDT" {
+			available, _ := strconv.ParseFloat(acc.Available, 64)
+			pnl, _ := strconv.ParseFloat(acc.Pnl, 64)
+			totalBalance += available + pnl
+		}
+	}
+
+	return totalBalance, nil
 }
 
 var _ ExchangeClient = (*GateClient)(nil)
