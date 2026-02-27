@@ -29,8 +29,8 @@ const generateManualId = () => {
 };
 
 const SIDES = [
-  { value: 'Buy', label: 'Long', color: '#10b981' },
-  { value: 'Sell', label: 'Short', color: '#ef4444' },
+  { value: 'Buy', label: 'Long', color: '#15803d' },
+  { value: 'Sell', label: 'Short', color: '#b91c1c' },
 ];
 
 export function Positions() {
@@ -181,13 +181,13 @@ export function Positions() {
             <span className="stat-card-title">Общий PnL</span>
             <div
               className="stat-card-icon"
-              style={{ background: totalPnl >= 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
+              style={{ background: totalPnl >= 0 ? 'linear-gradient(135deg, #15803d 0%, #14532d 100%)' : 'linear-gradient(135deg, #b91c1c 0%, #991b1b 100%)' }}
             >
               <TrendingUp size={20} color="white" />
             </div>
           </div>
           <div className={`stat-card-value ${totalPnl >= 0 ? 'positive' : 'negative'}`}>
-            {formatCurrency(totalPnl)}
+            {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
           </div>
           <div className="stat-card-subtitle">По всем сделкам</div>
         </motion.div>
@@ -202,7 +202,7 @@ export function Positions() {
             <span className="stat-card-title">Объём</span>
             <div
               className="stat-card-icon"
-              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+              style={{ background: 'linear-gradient(135deg, #15803d 0%, #14532d 100%)' }}
             >
               <ArrowLeftRight size={20} color="white" />
             </div>
@@ -462,7 +462,7 @@ export function Positions() {
                 <th>Символ</th>
                 <th>Сторона</th>
                 <th>Объем (USDT)</th>
-                <th>Маржа ($)</th>
+                <th>Маржа</th>
                 <th>Плечо</th>
                 <th>PnL</th>
                 <th>Дата</th>
@@ -504,7 +504,7 @@ export function Positions() {
                       className={position.closedPnl >= 0 ? 'text-success' : 'text-danger'}
                       style={{ fontWeight: '600' }}
                     >
-                      {position.closedPnl >= 0 ? '+' : ''}{formatCurrency(position.closedPnl)}
+                      {position.closedPnl >= 0 ? '+' : ''}{position.closedPnl.toFixed(2)}
                     </span>
                   </td>
                   <td style={{ color: 'var(--text-secondary)' }}>{formatDate(position.date)}</td>

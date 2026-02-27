@@ -131,7 +131,7 @@ export function Withdrawals() {
           <span className="stat-card-title">Всего выведено</span>
           <div
             className="stat-card-icon"
-            style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #15803d 0%, #14532d 100%)' }}
           >
             <Wallet size={20} color="white" />
           </div>

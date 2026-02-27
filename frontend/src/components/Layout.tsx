@@ -5,11 +5,7 @@ import {
   ArrowLeftRight,
   TrendingUp,
   Wallet,
-  Settings,
-  Zap,
-  Bitcoin,
-  Boxes,
-  DoorOpen
+  Settings
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import '../App.css';
@@ -24,13 +20,6 @@ const navItems = [
   { path: '/monthly-income', label: 'Доход', icon: TrendingUp },
   { path: '/withdrawals', label: 'Выводы', icon: Wallet },
   { path: '/settings', label: 'Настройки', icon: Settings },
-];
-
-const exchanges = [
-  { id: 'mexc', name: 'MEXC', icon: Zap, color: '#00C076' },
-  { id: 'bybit', name: 'Bybit', icon: Boxes, color: '#F7A600' },
-  { id: 'gate', name: 'Gate', icon: DoorOpen, color: '#F0B90B' },
-  { id: 'bitget', name: 'Bitget', icon: Bitcoin, color: '#00D9FF' },
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -49,14 +38,13 @@ export function Layout({ children }: LayoutProps) {
         <div className="sidebar-header">
           <motion.div
             className="sidebar-logo"
-            whileHover={{ scale: 1.1, rotate: 5 }}
+            whileHover={{ scale: 1.05 }}
             transition={{ type: 'spring', stiffness: 300 }}
           >
             ₿
           </motion.div>
           <div>
             <div className="sidebar-title">Trading Manager</div>
-            <div className="sidebar-subtitle">Crypto Portfolio</div>
           </div>
         </div>
 
@@ -65,7 +53,7 @@ export function Layout({ children }: LayoutProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
-            
+
             return (
               <Link key={item.path} to={item.path}>
                 <motion.div
@@ -80,35 +68,6 @@ export function Layout({ children }: LayoutProps) {
             );
           })}
         </nav>
-
-        {/* Exchange Status */}
-        <div className="exchange-badges">
-          {exchanges.map((ex) => {
-            const Icon = ex.icon;
-            return (
-              <motion.div
-                key={ex.id}
-                className="exchange-badge"
-                whileHover={{ scale: 1.05 }}
-                title={`${ex.name} - Connected`}
-              >
-                <Icon size={14} style={{ color: ex.color }} />
-                <span>{ex.name}</span>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* WebSocket Status */}
-        <motion.div
-          className="exchange-badge active"
-          style={{ marginTop: '12px' }}
-          animate={{ opacity: [1, 0.5, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <Zap size={14} />
-          <span>Live Sync</span>
-        </motion.div>
       </motion.aside>
 
       {/* Main Content */}

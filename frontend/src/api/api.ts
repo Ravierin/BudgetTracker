@@ -108,4 +108,10 @@ export const api = {
     });
     return handleResponse(response);
   },
+
+  // Balance
+  async getBalance(): Promise<{ totalBalance: number; exchangeBalances: { exchange: string; balance: number }[] }> {
+    const response = await fetch(`${API_BASE_URL}/balance`);
+    return handleResponse(response);
+  },
 };

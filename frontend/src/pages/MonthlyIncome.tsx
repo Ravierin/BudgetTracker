@@ -79,13 +79,13 @@ export function MonthlyIncome() {
             <span className="stat-card-title">Общий PnL</span>
             <div
               className="stat-card-icon"
-              style={{ background: totalPnl >= 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
+              style={{ background: totalPnl >= 0 ? 'linear-gradient(135deg, #15803d 0%, #14532d 100%)' : 'linear-gradient(135deg, #b91c1c 0%, #991b1b 100%)' }}
             >
               <TrendingUp size={20} color="white" />
             </div>
           </div>
           <div className={`stat-card-value ${totalPnl >= 0 ? 'positive' : 'negative'}`}>
-            {formatCurrency(totalPnl)}
+            {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
           </div>
           <div className="stat-card-subtitle">За все месяцы</div>
         </motion.div>
@@ -100,7 +100,7 @@ export function MonthlyIncome() {
             <span className="stat-card-title">Общий объём</span>
             <div
               className="stat-card-icon"
-              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+              style={{ background: 'linear-gradient(135deg, #15803d 0%, #14532d 100%)' }}
             >
               <DollarSign size={20} color="white" />
             </div>
