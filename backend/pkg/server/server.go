@@ -4,12 +4,14 @@ import (
 	"BudgetTracker/backend/internal/api"
 	"BudgetTracker/backend/internal/handler"
 	"BudgetTracker/backend/internal/model"
+	"BudgetTracker/backend/internal/repository"
 	"BudgetTracker/backend/internal/service"
 	"BudgetTracker/backend/pkg/websocket"
 	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -21,6 +23,8 @@ type Server struct {
 	withdrawalService *service.WithdrawalService
 	incomeService     *service.MonthlyIncomeService
 	apiKeyService     *service.APIKeyService
+	balanceService    *service.BalanceService
+	positionRepo      *repository.PositionRepository
 	bybitClient       *api.BybitClient
 	mexcClient        *api.MEXClient
 	wsHub             *websocket.Hub
@@ -31,6 +35,8 @@ func NewServer(
 	withdrawalService *service.WithdrawalService,
 	incomeService *service.MonthlyIncomeService,
 	apiKeyService *service.APIKeyService,
+	balanceService *service.BalanceService,
+	positionRepo *repository.PositionRepository,
 	bybitClient *api.BybitClient,
 	mexcClient *api.MEXClient,
 	gateClient *api.GateClient,
@@ -45,13 +51,83 @@ func NewServer(
 		withdrawalService: withdrawalService,
 		incomeService:     incomeService,
 		apiKeyService:     apiKeyService,
+		balanceService:    balanceService,
+		positionRepo:      positionRepo,
 		bybitClient:       bybitClient,
 		mexcClient:        mexcClient,
 		wsHub:             hub,
 	}
 
 	s.setupRoutes()
+	
+	// Initial sync of positions from all exchanges
+	go s.initialSync()
+	
 	return s
+}
+
+// initialSync performs initial synchronization from all exchanges
+func (s *Server) initialSync() {
+	// Wait a bit for server to start
+	time.Sleep(2 * time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Get all active API keys
+	apiKeys, err := s.apiKeyService.GetAllAPIKeys(ctx)
+	if err != nil {
+		return
+	}
+
+	for _, key := range apiKeys {
+		if !key.IsActive {
+			continue
+		}
+
+		s.syncExchange(ctx, key.Exchange, key.APIKey, key.APISecret)
+	}
+}
+
+// syncExchange syncs positions for a single exchange
+func (s *Server) syncExchange(ctx context.Context, exchangeName, apiKey, apiSecret string) int {
+	var positions []model.Position
+	var err error
+
+	switch exchangeName {
+	case "bybit":
+		client := api.NewBybitClient(apiKey, apiSecret)
+		positions, err = client.GetPositionsWithContext(ctx)
+	case "mexc":
+		client := api.NewMEXClient(apiKey, apiSecret)
+		positions, err = client.GetPositionsWithContext(ctx)
+	case "gate":
+		client := api.NewGateClient(apiKey, apiSecret)
+		positions, err = client.GetPositionsWithContext(ctx)
+	case "bitget":
+		client := api.NewBitgetClient(apiKey, apiSecret)
+		positions, err = client.GetPositionsWithContext(ctx)
+	default:
+		return 0
+	}
+
+	if err != nil {
+		// Skip temporary errors silently
+		if !containsTemporaryError(err.Error()) {
+			log.Printf("[%s] Sync error: %v", exchangeName, err)
+		}
+		return 0
+	}
+
+	if len(positions) > 0 {
+		if err := s.positionService.SavePositionsBatch(ctx, positions); err != nil {
+			log.Printf("[%s] Failed to save positions: %v", exchangeName, err)
+			return 0
+		}
+		log.Printf("[%s] Synced %d positions", exchangeName, len(positions))
+	}
+
+	return len(positions)
 }
 
 func (s *Server) setupRoutes() {
@@ -84,6 +160,13 @@ func (s *Server) setupRoutes() {
 	apiKeyHandler := handler.NewAPIKeyHandler(s.apiKeyService)
 	api.HandleFunc("/api-keys", apiKeyHandler.GetAPIKeys).Methods("GET")
 	api.HandleFunc("/api-keys", apiKeyHandler.SaveAPIKeys).Methods("POST")
+
+	balanceHandler := handler.NewBalanceHandler(s.balanceService)
+	api.HandleFunc("/balance", balanceHandler.GetBalance).Methods("GET")
+
+	testHandler := handler.NewTestHandler(s.positionRepo)
+	api.HandleFunc("/test/generate", testHandler.GenerateTestPositions).Methods("POST")
+	api.HandleFunc("/test/clear", testHandler.DeleteTestPositions).Methods("POST")
 
 	api.HandleFunc("/ws", s.wsHub.HandleWebSocket)
 
@@ -176,21 +259,17 @@ func (s *SyncService) Stop() {
 }
 
 func (s *SyncService) sync() {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
 	apiKey, err := s.apiKeyService.GetAPIKey(ctx, s.exchangeName)
 	if err != nil {
-		log.Printf("[%s] Failed to get API key: %v", s.exchangeName, err)
-		return
+		return // Skip silently
 	}
 
 	if apiKey.APIKey == "" || apiKey.APISecret == "" {
-		log.Printf("[%s] API keys not configured", s.exchangeName)
-		return
+		return // Keys not configured, skip silently
 	}
-
-	log.Printf("[%s] Syncing positions...", s.exchangeName)
 
 	var positions []model.Position
 	switch s.exchangeName {
@@ -207,24 +286,28 @@ func (s *SyncService) sync() {
 		client := api.NewBitgetClient(apiKey.APIKey, apiKey.APISecret)
 		positions, err = client.GetPositionsWithContext(ctx)
 	default:
-		log.Printf("Unknown exchange: %s", s.exchangeName)
 		return
 	}
 
 	if err != nil {
+		// Log only significant errors, skip rate limits/temporary issues
+		errMsg := err.Error()
+		if containsTemporaryError(errMsg) {
+			return // Don't log temporary errors
+		}
 		log.Printf("[%s] Sync error: %v", s.exchangeName, err)
 		return
 	}
 
-	log.Printf("[%s] Retrieved %d positions", s.exchangeName, len(positions))
-
-	if err := s.positionService.SavePositionsBatch(ctx, positions); err != nil {
-		log.Printf("[%s] Failed to save positions: %v", s.exchangeName, err)
-		return
+	if len(positions) > 0 {
+		if err := s.positionService.SavePositionsBatch(ctx, positions); err != nil {
+			log.Printf("[%s] Failed to save positions: %v", s.exchangeName, err)
+			return
+		}
+		log.Printf("[%s] Synced %d positions", s.exchangeName, len(positions))
 	}
 
-	log.Printf("[%s] Saved %d positions successfully", s.exchangeName, len(positions))
-
+	// Broadcast update
 	message := map[string]interface{}{
 		"type":      "positions_update",
 		"positions": positions,
@@ -232,4 +315,24 @@ func (s *SyncService) sync() {
 		"exchange":  s.exchangeName,
 	}
 	s.wsHub.Broadcast(message)
+}
+
+// containsTemporaryError checks if error is temporary (rate limit, timeout, etc.)
+func containsTemporaryError(errMsg string) bool {
+	temporaryErrors := []string{
+		"9999", // MEXC generic error (often rate limit)
+		"10001", // Bybit rate limit
+		"10006", // Bybit rate limit
+		"10014", // Bybit rate limit
+		"timeout",
+		"deadline exceeded",
+		"earlier than 2 years", // Bybit time range error
+		"rate limit",
+	}
+	for _, temp := range temporaryErrors {
+		if strings.Contains(errMsg, temp) {
+			return true
+		}
+	}
+	return false
 }

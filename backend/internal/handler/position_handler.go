@@ -127,5 +127,5 @@ func (h *PositionHandler) DeletePosition(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *PositionHandler) SyncPositions(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Use automatic sync every 30 seconds", http.StatusNotImplemented)
+	http.Error(w, "Use automatic sync every 5 seconds", http.StatusNotImplemented)
 }

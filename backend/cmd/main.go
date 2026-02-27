@@ -36,6 +36,7 @@ func main() {
 	incomeService := service.NewMonthlyIncomeService(incomeRepo)
 	apiKeyRepo := repository.NewAPIKeyRepository(db)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo)
+	balanceService := service.NewBalanceService(apiKeyService)
 
 	// Create clients with empty keys - will be populated dynamically from DB
 	bybitClient := api.NewBybitClient("", "")
@@ -43,12 +44,12 @@ func main() {
 	gateClient := api.NewGateClient("", "")
 	bitgetClient := api.NewBitgetClient("", "")
 
-	srv := server.NewServer(positionService, withdrawalService, incomeService, apiKeyService, bybitClient, mexcClient, gateClient, bitgetClient)
+	srv := server.NewServer(positionService, withdrawalService, incomeService, apiKeyService, balanceService, positionRepo, bybitClient, mexcClient, gateClient, bitgetClient)
 
 	// Create sync services for all exchanges
 	exchanges := []string{"bybit", "mexc", "gate", "bitget"}
 	for _, exchangeName := range exchanges {
-		syncService := server.NewSyncService(positionService, apiKeyService, srv.GetWSHub(), 30*time.Second, exchangeName)
+		syncService := server.NewSyncService(positionService, apiKeyService, srv.GetWSHub(), 5*time.Second, exchangeName)
 		go syncService.Start()
 	}
 
