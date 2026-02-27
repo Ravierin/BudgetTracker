@@ -15,6 +15,11 @@ type Position struct {
 	UpdatedAt    time.Time `json:"date"`
 }
 
+type ExchangeBalance struct {
+	Exchange string  `json:"exchange"`
+	Balance  float64 `json:"balance"`
+}
+
 type Withdrawal struct {
 	ID        int       `json:"id"`
 	Exchange  string    `json:"exchange"`
