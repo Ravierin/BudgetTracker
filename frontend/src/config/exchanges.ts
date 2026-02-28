@@ -21,20 +21,6 @@ export const EXCHANGES: ExchangeConfig[] = [
     apiKeyLabel: 'API Key',
     apiSecretLabel: 'API Secret',
   },
-  {
-    id: 'gate',
-    name: 'Gate.io',
-    icon: 'bi-door-open',
-    apiKeyLabel: 'API Key',
-    apiSecretLabel: 'API Secret',
-  },
-  {
-    id: 'bitget',
-    name: 'Bitget',
-    icon: 'bi-wallet2',
-    apiKeyLabel: 'API Key',
-    apiSecretLabel: 'Secret Key',
-  },
 ];
 
 export const getExchangeById = (id: string): ExchangeConfig | undefined => {

@@ -227,7 +227,7 @@ export function Settings() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Key size={20} color={exchange.id === 'mexc' ? '#00C076' : exchange.id === 'bybit' ? '#F7A600' : exchange.id === 'gate' ? '#F0B90B' : '#00D9FF'} />
+                  <Key size={20} color={exchange.id === 'mexc' ? '#00C076' : '#F7A600'} />
                 </div>
                 <div>
                   <h4 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>

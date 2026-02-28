@@ -8,8 +8,6 @@ import type { Withdrawal } from '../types';
 const EXCHANGES = [
   { id: 'mexc', name: 'MEXC', color: '#00C076' },
   { id: 'bybit', name: 'Bybit', color: '#F7A600' },
-  { id: 'gate', name: 'Gate', color: '#F0B90B' },
-  { id: 'bitget', name: 'Bitget', color: '#00D9FF' },
 ];
 
 const CURRENCIES = [

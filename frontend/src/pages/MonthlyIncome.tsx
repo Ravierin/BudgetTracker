@@ -125,7 +125,7 @@ export function MonthlyIncome() {
           >
             Все биржи
           </button>
-          {['mexc', 'bybit', 'gate', 'bitget'].map((ex) => (
+          {['mexc', 'bybit'].map((ex) => (
             <button
               key={ex}
               className={`btn ${filterExchange === ex ? 'btn-primary' : 'btn-secondary'}`}

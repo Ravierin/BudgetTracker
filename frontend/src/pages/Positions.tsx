@@ -14,8 +14,6 @@ import type { Position } from '../types';
 const EXCHANGES = [
   { id: 'mexc', name: 'MEXC', color: '#00C076' },
   { id: 'bybit', name: 'Bybit', color: '#F7A600' },
-  { id: 'gate', name: 'Gate', color: '#F0B90B' },
-  { id: 'bitget', name: 'Bitget', color: '#00D9FF' },
 ];
 
 const OTHER_EXCHANGES = 'other';
@@ -260,7 +258,7 @@ export function Positions() {
                     className="form-input"
                     value={formData.exchange}
                     onChange={(e) => setFormData({ ...formData, exchange: e.target.value.toUpperCase() })}
-                    placeholder="MEXC, BYBIT, GATE и т.д."
+                    placeholder="MEXC, BYBIT и т.д."
                     required
                   />
                 </div>
