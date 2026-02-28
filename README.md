@@ -25,29 +25,19 @@ docker-compose up -d
 
 ## 📸 Screenshots
 
-<table>
-<tr>
-<td valign="top">
-<a href="./docs/screenshots/dashboard.png" target="_blank">
-<img src="./docs/screenshots/dashboard.png" alt="Dashboard" width="650"/>
-</a>
-</td>
-<td valign="top">
-<a href="./docs/screenshots/position.png" target="_blank">
-<img src="./docs/screenshots/position.png" alt="Positions" width="320"/><br/>
-</a>
-<a href="./docs/screenshots/withdrawal.png" target="_blank">
-<img src="./docs/screenshots/withdrawal.png" alt="Withdrawals" width="320"/><br/>
-</a>
-<a href="./docs/screenshots/monthly-income.png" target="_blank">
-<img src="./docs/screenshots/monthly-income.png" alt="Monthly Income" width="320"/><br/>
-</a>
-<a href="./docs/screenshots/settings.png" target="_blank">
-<img src="./docs/screenshots/settings.png" alt="Settings" width="320"/>
-</a>
-</td>
-</tr>
-</table>
+**Dashboard**
+
+[![Dashboard](./docs/screenshots/dashboard.png)](./docs/screenshots/dashboard.png)
+
+**Other Pages**
+
+| Positions | Withdrawals |
+|-----------|-------------|
+| [![Positions](./docs/screenshots/position.png)](./docs/screenshots/position.png) | [![Withdrawals](./docs/screenshots/withdrawal.png)](./docs/screenshots/withdrawal.png) |
+
+| Monthly Income | Settings |
+|----------------|----------|
+| [![Monthly Income](./docs/screenshots/monthly-income.png)](./docs/screenshots/monthly-income.png) | [![Settings](./docs/screenshots/settings.png)](./docs/screenshots/settings.png) |
 
 ---
 
