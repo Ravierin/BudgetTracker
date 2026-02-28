@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -17,9 +16,9 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
+	// Try to load .env file (works for local development)
 	if err := godotenv.Load(".env"); err != nil {
-		log.Fatalf("Error reading config file, %s", err)
-		return nil, err
+		// Silently ignore - env vars should be set by Docker
 	}
 
 	return &Config{

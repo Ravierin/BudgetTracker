@@ -1,12 +1,12 @@
 package server
 
 import (
-	"BudgetTracker/backend/internal/api"
-	"BudgetTracker/backend/internal/handler"
-	"BudgetTracker/backend/internal/model"
-	"BudgetTracker/backend/internal/repository"
-	"BudgetTracker/backend/internal/service"
-	"BudgetTracker/backend/pkg/websocket"
+	"github.com/Ravierin/BudgetTracker/backend/internal/api"
+	"github.com/Ravierin/BudgetTracker/backend/internal/handler"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/repository"
+	"github.com/Ravierin/BudgetTracker/backend/internal/service"
+	"github.com/Ravierin/BudgetTracker/backend/pkg/websocket"
 	"context"
 	"encoding/json"
 	"log"
@@ -75,16 +75,26 @@ func (s *Server) initialSync() {
 	// Get all active API keys
 	apiKeys, err := s.apiKeyService.GetAllAPIKeys(ctx)
 	if err != nil {
+		log.Printf("Failed to get API keys for initial sync: %v", err)
 		return
 	}
 
+	log.Printf("Found %d API keys configured", len(apiKeys))
+
+	totalSynced := 0
 	for _, key := range apiKeys {
 		if !key.IsActive {
+			log.Printf("[%s] Skipping inactive key", key.Exchange)
 			continue
 		}
 
-		s.syncExchange(ctx, key.Exchange, key.APIKey, key.APISecret)
+		log.Printf("[%s] Starting initial sync...", key.Exchange)
+		synced := s.syncExchange(ctx, key.Exchange, key.APIKey, key.APISecret)
+		totalSynced += synced
+		log.Printf("[%s] Initial sync completed: %d positions", key.Exchange, synced)
 	}
+
+	log.Printf("Initial sync completed. Total positions synced: %d", totalSynced)
 }
 
 // syncExchange syncs positions for a single exchange
@@ -251,15 +261,19 @@ func (s *SyncService) Stop() {
 }
 
 func (s *SyncService) sync() {
+	log.Printf("[%s] Starting sync...", s.exchangeName)
+	
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
 	apiKey, err := s.apiKeyService.GetAPIKey(ctx, s.exchangeName)
 	if err != nil {
+		log.Printf("[%s] Failed to get API key: %v", s.exchangeName, err)
 		return // Skip silently
 	}
 
 	if apiKey.APIKey == "" || apiKey.APISecret == "" {
+		log.Printf("[%s] API keys not configured", s.exchangeName)
 		return // Keys not configured, skip silently
 	}
 
@@ -291,6 +305,8 @@ func (s *SyncService) sync() {
 			return
 		}
 		log.Printf("[%s] Synced %d positions", s.exchangeName, len(positions))
+	} else {
+		log.Printf("[%s] No positions found", s.exchangeName)
 	}
 
 	// Broadcast update

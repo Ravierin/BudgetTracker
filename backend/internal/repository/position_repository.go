@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"BudgetTracker/backend/internal/model"
-	"BudgetTracker/backend/pkg/database"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/pkg/database"
 	"context"
 	"time"
 

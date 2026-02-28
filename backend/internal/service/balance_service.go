@@ -1,10 +1,9 @@
 package service
 
 import (
-	"BudgetTracker/backend/internal/api"
-	"BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/api"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
 	"context"
-	"log"
 )
 
 type BalanceService struct {
@@ -32,7 +31,7 @@ func (s *BalanceService) GetTotalBalance(ctx context.Context) (float64, []model.
 
 		balance, err := s.getExchangeBalance(ctx, key.Exchange, key.APIKey, key.APISecret)
 		if err != nil {
-			log.Printf("[%s] Failed to get balance: %v", key.Exchange, err)
+			// Skip errors silently for balance checking
 			continue
 		}
 

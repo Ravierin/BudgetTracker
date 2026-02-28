@@ -1,7 +1,7 @@
 package api
 
 import (
-	"BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	bybit "github.com/bybit-exchange/bybit.go.api"
@@ -123,7 +124,6 @@ func (b *BybitClient) getDirectClosedPositions(ctx context.Context) ([]model.Pos
 		// Volume = cumEntryValue (position value at entry in USDT)
 		volume, _ := strconv.ParseFloat(posMap["cumEntryValue"].(string), 64)
 		leverage, _ := strconv.Atoi(posMap["leverage"].(string))
-		margin := volume / float64(leverage)
 		closedPnl, _ := strconv.ParseFloat(posMap["closedPnl"].(string), 64)
 		
 		updatedTime, _ := strconv.ParseFloat(posMap["updatedTime"].(string), 64)
@@ -134,7 +134,6 @@ func (b *BybitClient) getDirectClosedPositions(ctx context.Context) ([]model.Pos
 			Exchange:     "bybit",
 			Symbol:       symbol,
 			Volume:       volume,
-			Margin:       margin,
 			Leverage:     leverage,
 			ClosedPnl:    closedPnl,
 			Side:         side,
@@ -147,37 +146,118 @@ func (b *BybitClient) getDirectClosedPositions(ctx context.Context) ([]model.Pos
 
 // getClosePnl uses the GetClosePnl endpoint (for UTA accounts)
 func (b *BybitClient) getClosePnl(ctx context.Context) ([]model.Position, error) {
-	params := map[string]interface{}{
-		"category": "linear",
-		"limit":    100,
+	var allPositions []model.Position
+
+	// Bybit limits time range to 7 days per request
+	// Paginate through history in 7-day chunks going back up to 2 years (max retention)
+	now := time.Now()
+	endTime := now.UnixMilli()
+
+	// Bybit stores closed PnL data for up to 2 years
+	// Add 1 day buffer to avoid "earlier than 2 years" error
+	maxHistory := now.AddDate(-2, 0, 1).UnixMilli()
+
+	log.Printf("[bybit] Starting position sync from %s to %s", 
+		time.UnixMilli(maxHistory).Format("2006-01-02"),
+		time.UnixMilli(endTime).Format("2006-01-02"))
+
+	for endTime > maxHistory {
+		// Calculate start time for this chunk (7 days max)
+		startTime := time.UnixMilli(endTime).AddDate(0, 0, -7).UnixMilli()
+		if startTime < maxHistory {
+			startTime = maxHistory
+		}
+
+		log.Printf("[bybit] Fetching chunk: %s to %s", 
+			time.UnixMilli(startTime).Format("2006-01-02"),
+			time.UnixMilli(endTime).Format("2006-01-02"))
+
+		positions, _, err := b.fetchClosePnlChunk(ctx, startTime, endTime)
+		if err != nil {
+			// If it's a "2 years" error, just stop pagination
+			if strings.Contains(err.Error(), "earlier than 2 years") {
+				break
+			}
+			log.Printf("[bybit] Error fetching chunk: %v", err)
+			return nil, err
+		}
+
+		log.Printf("[bybit] Retrieved %d positions from chunk", len(positions))
+		allPositions = append(allPositions, positions...)
+
+		// Move to next time chunk
+		endTime = startTime
+		time.Sleep(50 * time.Millisecond) // Rate limiting
 	}
 
-	result, err := b.bybit.NewClassicalBybitServiceWithParams(params).GetClosePnl(ctx)
-	if err != nil {
-		log.Printf("[bybit] GetClosePnl error: %v", err)
-		return nil, err
-	}
+	log.Printf("[bybit] Total positions retrieved: %d", len(allPositions))
 
-	log.Printf("[bybit] GetClosePnl RetCode: %d, RetMsg: %s", result.RetCode, result.RetMsg)
-
-	list, ok := result.Result.(map[string]interface{})
-	if !ok {
-		return nil, nil
-	}
-
-	items, ok := list["list"].([]interface{})
-	if !ok {
-		return nil, nil
-	}
-
-	log.Printf("[bybit] GetClosePnl retrieved %d positions", len(items))
-
-	if len(items) == 0 {
+	if len(allPositions) == 0 {
 		// Try execution history as last resort
+		log.Printf("[bybit] No positions from getClosePnl, trying execution history...")
 		return b.getExecutionHistory(ctx)
 	}
 
+	return allPositions, nil
+}
+
+// fetchClosePnlChunk fetches one chunk of closed PnL data with pagination
+func (b *BybitClient) fetchClosePnlChunk(ctx context.Context, startTime, endTime int64) ([]model.Position, string, error) {
+	var allPositions []model.Position
+	var cursor string
+
+	for {
+		params := map[string]interface{}{
+			"category":  "linear",
+			"limit":     100,
+			"startTime": startTime,
+			"endTime":   endTime,
+		}
+
+		if cursor != "" {
+			params["cursor"] = cursor
+		}
+
+		result, err := b.bybit.NewClassicalBybitServiceWithParams(params).GetClosePnl(ctx)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if result.RetCode != 0 {
+			log.Printf("[bybit] GetClosePnl error: RetCode=%d, RetMsg=%s", result.RetCode, result.RetMsg)
+			return nil, "", fmt.Errorf("API error: %s", result.RetMsg)
+		}
+
+		list, ok := result.Result.(map[string]interface{})
+		if !ok {
+			return nil, "", nil
+		}
+
+		items, ok := list["list"].([]interface{})
+		if !ok {
+			return nil, "", nil
+		}
+
+		if len(items) > 0 {
+			positions := b.parseClosePnlItems(items)
+			allPositions = append(allPositions, positions...)
+		}
+
+		// Get next page cursor
+		nextPageCursor, _ := list["nextPageCursor"].(string)
+		if nextPageCursor == "" || len(items) < 100 {
+			return allPositions, "", nil
+		}
+
+		cursor = nextPageCursor
+		time.Sleep(50 * time.Millisecond) // Rate limiting
+	}
+}
+
+// parseClosePnlItems parses items from GetClosePnl response
+func (b *BybitClient) parseClosePnlItems(items []interface{}) []model.Position {
 	var positions []model.Position
+
 	for _, item := range items {
 		posMap, ok := item.(map[string]interface{})
 		if !ok {
@@ -190,7 +270,6 @@ func (b *BybitClient) getClosePnl(ctx context.Context) ([]model.Position, error)
 
 		volume, _ := strconv.ParseFloat(posMap["cumEntryValue"].(string), 64)
 		leverage, _ := strconv.Atoi(posMap["leverage"].(string))
-		margin := volume / float64(leverage)
 		closedPnl, _ := strconv.ParseFloat(posMap["closedPnl"].(string), 64)
 
 		updatedTime, _ := strconv.ParseFloat(posMap["updatedTime"].(string), 64)
@@ -201,7 +280,6 @@ func (b *BybitClient) getClosePnl(ctx context.Context) ([]model.Position, error)
 			Exchange:     "bybit",
 			Symbol:       symbol,
 			Volume:       volume,
-			Margin:       margin,
 			Leverage:     leverage,
 			ClosedPnl:    closedPnl,
 			Side:         side,
@@ -209,7 +287,7 @@ func (b *BybitClient) getClosePnl(ctx context.Context) ([]model.Position, error)
 		})
 	}
 
-	return positions, nil
+	return positions
 }
 
 // getExecutionHistory fetches closed positions from execution history via direct HTTP API
@@ -351,7 +429,6 @@ func (b *BybitClient) getExecutionHistory(ctx context.Context) ([]model.Position
 		if leverage == 0 {
 			leverage = 1
 		}
-		margin := volume / float64(leverage)
 		
 		// closedPnl might be in execFee or closedPnl field
 		closedPnl, _ := strconv.ParseFloat(execMap["closedPnl"].(string), 64)
@@ -364,7 +441,6 @@ func (b *BybitClient) getExecutionHistory(ctx context.Context) ([]model.Position
 			Exchange:     "bybit",
 			Symbol:       symbol,
 			Volume:       volume,
-			Margin:       margin,
 			Leverage:     leverage,
 			ClosedPnl:    closedPnl,
 			Side:         side,
@@ -382,12 +458,68 @@ func (b *BybitClient) signV5(method, path, queryString, timestamp string) string
 	// For POST: payload = body
 	recvWindow := "30000"
 	payload := timestamp + b.apiKey + recvWindow
-	
+
 	if method == "GET" && queryString != "" {
 		payload += queryString
 	}
-	
+
 	h := hmac.New(sha256.New, []byte(b.apiSecret))
 	h.Write([]byte(payload))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// GetBalance returns total wallet balance in USDT
+func (b *BybitClient) GetBalance(ctx context.Context) (float64, error) {
+	baseURL := "https://api.bybit.com"
+	endpoint := "/v5/account/wallet-balance"
+	
+	params := url.Values{}
+	params.Set("accountType", "UNIFIED")
+	
+	queryString := params.Encode()
+	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
+	signature := b.signV5("GET", endpoint, queryString, timestamp)
+	
+	reqURL := baseURL + endpoint + "?" + queryString
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	if err != nil {
+		return 0, err
+	}
+	
+	req.Header.Set("X-BAPI-API-KEY", b.apiKey)
+	req.Header.Set("X-BAPI-SIGN", signature)
+	req.Header.Set("X-BAPI-TIMESTAMP", timestamp)
+	req.Header.Set("X-BAPI-RECV-WINDOW", "30000")
+	
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	
+	var apiResp struct {
+		RetCode int    `json:"retCode"`
+		RetMsg  string `json:"retMsg"`
+		Result  struct {
+			List []struct {
+				TotalEquity string `json:"totalEquity"`
+			} `json:"list"`
+		} `json:"result"`
+	}
+	
+	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+		return 0, err
+	}
+	
+	if apiResp.RetCode != 0 {
+		return 0, fmt.Errorf("Bybit API error: %s", apiResp.RetMsg)
+	}
+	
+	if len(apiResp.Result.List) == 0 {
+		return 0, nil
+	}
+	
+	totalEquity, _ := strconv.ParseFloat(apiResp.Result.List[0].TotalEquity, 64)
+	return totalEquity, nil
 }

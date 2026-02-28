@@ -1,4 +1,4 @@
-module BudgetTracker/backend
+module github.com/Ravierin/BudgetTracker/backend
 
 go 1.24.0
 

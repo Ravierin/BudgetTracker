@@ -1,7 +1,7 @@
 package api
 
 import (
-	"BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -216,37 +216,117 @@ func (m *MEXClient) GetPositionsWithContext(ctx context.Context) ([]model.Positi
 
 // GetBalance returns total futures account balance in USDT
 func (m *MEXClient) GetBalance(ctx context.Context) (float64, error) {
-	// MEXC futures account overview endpoint
+	// Try multiple MEXC balance endpoints in order of preference
+	endpoints := []string{
+		"/api/v1/private/account/futures",   // Futures account balance (primary)
+		"/api/v1/private/account/info",      // Account info with futures balance
+		"/api/v1/private/account/assets",    // All account assets (spot + futures)
+	}
+	
+	for _, endpoint := range endpoints {
+		balance, err := m.getBalanceFromEndpoint(ctx, endpoint)
+		if err == nil && balance > 0 {
+			return balance, nil
+		}
+	}
+	
+	// Return 0 if no balance found (MEXC may not support balance API)
+	return 0, nil
+}
+
+// getBalanceFromEndpoint tries to get balance from a specific endpoint
+func (m *MEXClient) getBalanceFromEndpoint(ctx context.Context, endpoint string) (float64, error) {
 	params := map[string]string{}
 
-	body, err := m.doRequestV1(ctx, "/api/v1/private/account/overview", params)
+	body, err := m.doRequestV1(ctx, endpoint, params)
 	if err != nil {
 		return 0, err
 	}
 
-	var resp struct {
+	log.Printf("[mexc] Trying endpoint %s, response: %s", endpoint, string(body)[:min(200, len(body))])
+
+	// Try different response formats
+	
+	// Format 1: Futures balance
+	var resp1 struct {
 		Success bool `json:"success"`
 		Code    int  `json:"code"`
 		Data    struct {
-			AccountBalance string `json:"accountBalance"`
+			Balance     string `json:"balance"`
+			Available   string `json:"available"`
+			Frozen      string `json:"frozen"`
 		} `json:"data"`
 	}
-
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return 0, err
-	}
-
-	if !resp.Success || resp.Code != 0 {
-		// If endpoint not found, return 0 balance silently
-		if resp.Code == 404 {
-			return 0, nil
+	
+	if err := json.Unmarshal(body, &resp1); err == nil && resp1.Success && resp1.Code == 0 {
+		if resp1.Data.Balance != "" {
+			balance, _ := strconv.ParseFloat(resp1.Data.Balance, 64)
+			if balance > 0 {
+				log.Printf("[mexc] ✓ Balance from %s: %.2f USDT", endpoint, balance)
+				return balance, nil
+			}
 		}
-		return 0, fmt.Errorf("MEXC API error: code=%d", resp.Code)
 	}
+	
+	// Format 2: Account info with accountBalance
+	var resp2 struct {
+		Success bool `json:"success"`
+		Code    int  `json:"code"`
+		Data    struct {
+			AccountBalance   string `json:"accountBalance"`
+			AvailableBalance string `json:"availableBalance"`
+		} `json:"data"`
+	}
+	
+	if err := json.Unmarshal(body, &resp2); err == nil && resp2.Success && resp2.Code == 0 {
+		if resp2.Data.AccountBalance != "" {
+			balance, _ := strconv.ParseFloat(resp2.Data.AccountBalance, 64)
+			if balance > 0 {
+				log.Printf("[mexc] ✓ Balance from %s: %.2f USDT", endpoint, balance)
+				return balance, nil
+			}
+		}
+	}
+	
+	// Format 3: Array of assets
+	var resp3 struct {
+		Success bool `json:"success"`
+		Code    int  `json:"code"`
+		Data    []struct {
+			Currency      string `json:"currency"`
+			PositionMargin string `json:"positionMargin"`
+			AvailableBalance string `json:"availableBalance"`
+			CashBalance   string `json:"cashBalance"`
+			Equity        string `json:"equity"`
+		} `json:"data"`
+	}
+	
+	if err := json.Unmarshal(body, &resp3); err == nil && resp3.Success && resp3.Code == 0 {
+		totalBalance := 0.0
+		for _, asset := range resp3.Data {
+			// Sum up equity (total value) for all currencies
+			if asset.Equity != "" {
+				equity, _ := strconv.ParseFloat(asset.Equity, 64)
+				totalBalance += equity
+			}
+		}
+		if totalBalance > 0 {
+			log.Printf("[mexc] ✓ Balance from %s: %.2f USDT (assets: %d)", endpoint, totalBalance, len(resp3.Data))
+			return totalBalance, nil
+		} else if len(resp3.Data) > 0 {
+			log.Printf("[mexc] Found %d assets but total balance is 0", len(resp3.Data))
+		}
+	}
+	
+	return 0, fmt.Errorf("no valid balance found")
+}
 
-	balance, _ := strconv.ParseFloat(resp.Data.AccountBalance, 64)
-	log.Printf("[mexc] Balance: %.2f USDT", balance)
-	return balance, nil
+// Helper function for min
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // GetContractSize returns the contract size for a given symbol

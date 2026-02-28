@@ -1,8 +1,8 @@
 package service
 
 import (
-	"BudgetTracker/backend/internal/model"
-	"BudgetTracker/backend/internal/repository"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/repository"
 	"context"
 	"time"
 )

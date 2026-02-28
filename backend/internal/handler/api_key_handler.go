@@ -1,9 +1,10 @@
 package handler
 
 import (
-	"BudgetTracker/backend/internal/model"
-	"BudgetTracker/backend/internal/service"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/service"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -47,12 +48,15 @@ func (h *APIKeyHandler) SaveAPIKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("[API] Saving %d API keys: %v", len(keys), keys)
+
 	if len(keys) == 0 {
 		http.Error(w, "No API keys provided", http.StatusBadRequest)
 		return
 	}
 
 	for _, key := range keys {
+		log.Printf("[API] Saving key for %s: apiKey=%s... (len=%d)", key.Exchange, key.APIKey[:8], len(key.APIKey))
 		if err := h.service.SaveAPIKey(ctx, &key); err != nil {
 			http.Error(w, "Failed to save key for "+key.Exchange+": "+err.Error(), http.StatusInternalServerError)
 			return

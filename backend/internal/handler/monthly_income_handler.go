@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"BudgetTracker/backend/internal/model"
-	"BudgetTracker/backend/internal/service"
-	"BudgetTracker/backend/pkg/websocket"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/service"
+	"github.com/Ravierin/BudgetTracker/backend/pkg/websocket"
 	"encoding/json"
 	"net/http"
 	"time"

@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"BudgetTracker/backend/internal/model"
-	"BudgetTracker/backend/internal/service"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/service"
 	"encoding/json"
 	"net/http"
 )

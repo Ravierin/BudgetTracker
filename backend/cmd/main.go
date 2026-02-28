@@ -1,12 +1,12 @@
 package main
 
 import (
-	"BudgetTracker/backend/internal/api"
-	"BudgetTracker/backend/internal/repository"
-	"BudgetTracker/backend/internal/service"
-	"BudgetTracker/backend/pkg/config"
-	"BudgetTracker/backend/pkg/database"
-	"BudgetTracker/backend/pkg/server"
+	"github.com/Ravierin/BudgetTracker/backend/internal/api"
+	"github.com/Ravierin/BudgetTracker/backend/internal/repository"
+	"github.com/Ravierin/BudgetTracker/backend/internal/service"
+	"github.com/Ravierin/BudgetTracker/backend/pkg/config"
+	"github.com/Ravierin/BudgetTracker/backend/pkg/database"
+	"github.com/Ravierin/BudgetTracker/backend/pkg/server"
 	"context"
 	"log"
 	"net/http"
@@ -47,7 +47,7 @@ func main() {
 	// Create sync services for all exchanges
 	exchanges := []string{"bybit", "mexc"}
 	for _, exchangeName := range exchanges {
-		syncService := server.NewSyncService(positionService, apiKeyService, srv.GetWSHub(), 5*time.Second, exchangeName)
+		syncService := server.NewSyncService(positionService, apiKeyService, srv.GetWSHub(), 30*time.Second, exchangeName)
 		go syncService.Start()
 	}
 

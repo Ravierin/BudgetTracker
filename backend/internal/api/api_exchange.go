@@ -1,7 +1,7 @@
 package api
 
 import (
-	"BudgetTracker/backend/internal/model"
+	"github.com/Ravierin/BudgetTracker/backend/internal/model"
 	"context"
 )
 
