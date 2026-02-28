@@ -39,8 +39,6 @@ func NewServer(
 	positionRepo *repository.PositionRepository,
 	bybitClient *api.BybitClient,
 	mexcClient *api.MEXClient,
-	gateClient *api.GateClient,
-	bitgetClient *api.BitgetClient,
 ) *Server {
 	hub := websocket.NewHub()
 	go hub.Run()
@@ -100,12 +98,6 @@ func (s *Server) syncExchange(ctx context.Context, exchangeName, apiKey, apiSecr
 		positions, err = client.GetPositionsWithContext(ctx)
 	case "mexc":
 		client := api.NewMEXClient(apiKey, apiSecret)
-		positions, err = client.GetPositionsWithContext(ctx)
-	case "gate":
-		client := api.NewGateClient(apiKey, apiSecret)
-		positions, err = client.GetPositionsWithContext(ctx)
-	case "bitget":
-		client := api.NewBitgetClient(apiKey, apiSecret)
 		positions, err = client.GetPositionsWithContext(ctx)
 	default:
 		return 0
@@ -278,12 +270,6 @@ func (s *SyncService) sync() {
 		positions, err = client.GetPositionsWithContext(ctx)
 	case "mexc":
 		client := api.NewMEXClient(apiKey.APIKey, apiKey.APISecret)
-		positions, err = client.GetPositionsWithContext(ctx)
-	case "gate":
-		client := api.NewGateClient(apiKey.APIKey, apiKey.APISecret)
-		positions, err = client.GetPositionsWithContext(ctx)
-	case "bitget":
-		client := api.NewBitgetClient(apiKey.APIKey, apiKey.APISecret)
 		positions, err = client.GetPositionsWithContext(ctx)
 	default:
 		return

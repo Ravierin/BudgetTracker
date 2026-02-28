@@ -4,7 +4,6 @@ export interface Position {
   exchange: string;
   symbol: string;
   volume: number;
-  margin: number;
   leverage: number;
   closedPnl: number;
   side: string;

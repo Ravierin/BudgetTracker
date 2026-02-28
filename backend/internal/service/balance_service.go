@@ -56,10 +56,6 @@ func (s *BalanceService) getExchangeBalance(ctx context.Context, exchange, apiKe
 		client = api.NewBybitClient(apiKey, apiSecret)
 	case "mexc":
 		client = api.NewMEXClient(apiKey, apiSecret)
-	case "gate":
-		client = api.NewGateClient(apiKey, apiSecret)
-	case "bitget":
-		client = api.NewBitgetClient(apiKey, apiSecret)
 	default:
 		return 0, nil
 	}

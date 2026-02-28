@@ -5,7 +5,6 @@ import {
   Plus,
   Trash2,
   Filter,
-  RefreshCw,
   TrendingUp
 } from 'lucide-react';
 import { api } from '../api/api';
@@ -36,7 +35,6 @@ const SIDES = [
 export function Positions() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [filterExchange, setFilterExchange] = useState<string>('');
   const [formData, setFormData] = useState({
@@ -44,7 +42,6 @@ export function Positions() {
     symbol: '',
     side: 'Buy' as 'Buy' | 'Sell',
     volume: '',
-    margin: '',
     leverage: '1',
     closedPnl: '',
     date: new Date().toISOString().slice(0, 16),
@@ -80,18 +77,6 @@ export function Positions() {
     return () => unsubscribe();
   }, [filterExchange]);
 
-  const handleSync = async (exchange?: string) => {
-    setSyncing(true);
-    try {
-      await api.syncPositions(exchange);
-      await loadPositions();
-    } catch (error) {
-      console.error('Failed to sync positions:', error);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -101,7 +86,6 @@ export function Positions() {
         symbol: formData.symbol.toUpperCase(),
         side: formData.side,
         volume: parseFloat(formData.volume),
-        margin: parseFloat(formData.margin),
         leverage: parseInt(formData.leverage),
         closedPnl: parseFloat(formData.closedPnl),
         date: new Date(formData.date).toISOString(),
@@ -112,7 +96,6 @@ export function Positions() {
         symbol: '',
         side: 'Buy',
         volume: '',
-        margin: '',
         leverage: '1',
         closedPnl: '',
         date: new Date().toISOString().slice(0, 16),
@@ -217,29 +200,17 @@ export function Positions() {
         <div className="card-header">
           <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Filter size={20} color="var(--accent-primary)" />
-            Фильтр и действия
+            Фильтр по биржам
           </h3>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <motion.button
-              className="btn btn-secondary"
-              onClick={() => handleSync(filterExchange === OTHER_EXCHANGES ? undefined : filterExchange || undefined)}
-              disabled={syncing}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <RefreshCw size={18} className={syncing ? 'spinning' : ''} />
-              {syncing ? 'Синх...' : 'Синхронизация'}
-            </motion.button>
-            <motion.button
-              className="btn btn-primary"
-              onClick={() => setShowForm(!showForm)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Plus size={18} />
-              {showForm ? 'Отмена' : 'Добавить сделку'}
-            </motion.button>
-          </div>
+          <motion.button
+            className="btn btn-primary"
+            onClick={() => setShowForm(!showForm)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Plus size={18} />
+            {showForm ? 'Отмена' : 'Добавить сделку'}
+          </motion.button>
         </div>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
@@ -345,20 +316,6 @@ export function Positions() {
                   />
                 </div>
 
-                {/* Margin */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Маржа ($)</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={formData.margin}
-                    onChange={(e) => setFormData({ ...formData, margin: e.target.value })}
-                    placeholder="0.00"
-                    step="0.01"
-                    required
-                  />
-                </div>
-
                 {/* Leverage */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Плечо</label>
@@ -439,18 +396,12 @@ export function Positions() {
               Нет сделок
             </h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Синхронизируйте с биржами или добавьте вручную
+              Добавьте первую сделку вручную
             </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-              <button className="btn btn-primary" onClick={() => handleSync()}>
-                <RefreshCw size={18} />
-                Синхронизировать
-              </button>
-              <button className="btn btn-secondary" onClick={() => setShowForm(true)}>
-                <Plus size={18} />
-                Добавить вручную
-              </button>
-            </div>
+            <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+              <Plus size={18} />
+              Добавить вручную
+            </button>
           </div>
         </div>
       ) : (
@@ -462,7 +413,6 @@ export function Positions() {
                 <th>Символ</th>
                 <th>Сторона</th>
                 <th>Объем (USDT)</th>
-                <th>Маржа</th>
                 <th>Плечо</th>
                 <th>PnL</th>
                 <th>Дата</th>
@@ -495,7 +445,6 @@ export function Positions() {
                     </span>
                   </td>
                   <td style={{ color: 'var(--text-primary)' }}>{position.volume.toLocaleString('ru-RU')}</td>
-                  <td style={{ color: 'var(--text-primary)' }}>{position.margin.toLocaleString('ru-RU')}</td>
                   <td>
                     <span className="badge badge-warning">{position.leverage}x</span>
                   </td>

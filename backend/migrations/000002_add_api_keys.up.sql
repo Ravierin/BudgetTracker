@@ -9,9 +9,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
 );
 
 INSERT INTO api_keys (exchange, api_key, api_secret, is_active)
-VALUES 
+VALUES
     ('mexc', '', '', false),
-    ('bybit', '', '', false),
-    ('gate', '', '', false),
-    ('bitget', '', '', false)
+    ('bybit', '', '', false)
 ON CONFLICT (exchange) DO NOTHING;

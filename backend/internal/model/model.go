@@ -8,7 +8,6 @@ type Position struct {
 	Exchange     string    `json:"exchange"`
 	Symbol       string    `json:"symbol"`
 	Volume       float64   `json:"volume"`
-	Margin       float64   `json:"margin"`
 	Leverage     int       `json:"leverage"`
 	ClosedPnl    float64   `json:"closedPnl"`
 	Side         string    `json:"side"`

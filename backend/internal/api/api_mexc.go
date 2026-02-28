@@ -134,16 +134,21 @@ func (m *MEXClient) GetPositionsWithContext(ctx context.Context) ([]model.Positi
 
 		// Try to unmarshal data as array first (MEXC v1 returns array directly)
 		var positionsList []struct {
-			PositionID      int64   `json:"positionId"`
-			Symbol          string  `json:"symbol"`
-			PositionType    int     `json:"positionType"` // 1=Buy, 2=Sell
-			CloseVol        float64 `json:"closeVol"`
-			CloseAvgPrice   float64 `json:"closeAvgPrice"`
-			OpenAvgPrice    float64 `json:"openAvgPrice"`
-			Leverage        int     `json:"leverage"`
-			CloseProfitLoss float64 `json:"closeProfitLoss"`
-			CreateTime      int64   `json:"createTime"`
-			UpdateTime      int64   `json:"updateTime"`
+			PositionID            int64   `json:"positionId"`
+			Symbol                string  `json:"symbol"`
+			PositionType          int     `json:"positionType"` // 1=Buy, 2=Sell
+			CloseVol              float64 `json:"closeVol"`
+			CloseAvgPrice         float64 `json:"closeAvgPrice"`
+			OpenAvgPrice          float64 `json:"openAvgPrice"`
+			HoldAvgPriceFullyScale string `json:"holdAvgPriceFullyScale"`
+			Leverage              int     `json:"leverage"`
+			CloseProfitLoss       float64 `json:"closeProfitLoss"`
+			Realised              float64 `json:"realised"`
+			HoldFee               float64 `json:"holdFee"`
+			Oim                   float64 `json:"oim"`
+			Im                    float64 `json:"im"`
+			CreateTime            int64   `json:"createTime"`
+			UpdateTime            int64   `json:"updateTime"`
 		}
 
 		// Try as array first
@@ -167,6 +172,8 @@ func (m *MEXClient) GetPositionsWithContext(ctx context.Context) ([]model.Positi
 			positionsList = nil // Not used in this case
 		}
 
+		log.Printf("[mexc] Page %d: %d positions", page, len(positionsList))
+
 		if len(positionsList) == 0 {
 			break // No more positions
 		}
@@ -177,17 +184,17 @@ func (m *MEXClient) GetPositionsWithContext(ctx context.Context) ([]model.Positi
 				side = "Sell"
 			}
 
-			// Volume = CloseVol (closed quantity)
-			volume := pos.CloseVol
-			// Margin = Volume / Leverage (initial margin)
-			margin := volume / float64(pos.Leverage)
+			// Volume = CloseVol × OpenAvgPrice × ContractSize
+			// From MEXC official formula: vol = (usdtAmount × leverage) / (price × contractSize)
+			// Therefore: usdtAmount × leverage = vol × price × contractSize = Volume
+			contractSize := GetContractSize(pos.Symbol)
+			volume := pos.CloseVol * pos.OpenAvgPrice * contractSize
 
 			allPositions = append(allPositions, model.Position{
 				OrderID:   fmt.Sprintf("%d", pos.PositionID),
 				Exchange:  "mexc",
 				Symbol:    pos.Symbol,
 				Volume:    volume,
-				Margin:    margin,
 				Leverage:  pos.Leverage,
 				ClosedPnl: pos.CloseProfitLoss,
 				Side:      side,
@@ -209,10 +216,10 @@ func (m *MEXClient) GetPositionsWithContext(ctx context.Context) ([]model.Positi
 
 // GetBalance returns total futures account balance in USDT
 func (m *MEXClient) GetBalance(ctx context.Context) (float64, error) {
-	// MEXC futures balance endpoint
+	// MEXC futures account overview endpoint
 	params := map[string]string{}
 
-	body, err := m.doRequestV1(ctx, "/api/v1/private/account/balance", params)
+	body, err := m.doRequestV1(ctx, "/api/v1/private/account/overview", params)
 	if err != nil {
 		return 0, err
 	}
@@ -221,7 +228,7 @@ func (m *MEXClient) GetBalance(ctx context.Context) (float64, error) {
 		Success bool `json:"success"`
 		Code    int  `json:"code"`
 		Data    struct {
-			Balance string `json:"balance"`
+			AccountBalance string `json:"accountBalance"`
 		} `json:"data"`
 	}
 
@@ -230,12 +237,34 @@ func (m *MEXClient) GetBalance(ctx context.Context) (float64, error) {
 	}
 
 	if !resp.Success || resp.Code != 0 {
+		// If endpoint not found, return 0 balance silently
+		if resp.Code == 404 {
+			return 0, nil
+		}
 		return 0, fmt.Errorf("MEXC API error: code=%d", resp.Code)
 	}
 
-	balance, _ := strconv.ParseFloat(resp.Data.Balance, 64)
+	balance, _ := strconv.ParseFloat(resp.Data.AccountBalance, 64)
 	log.Printf("[mexc] Balance: %.2f USDT", balance)
 	return balance, nil
+}
+
+// GetContractSize returns the contract size for a given symbol
+// Contract size varies by symbol (from getFuturesContracts API)
+// Common values: BTC=0.001, ETH=0.01, small-cap=1 or 10
+func GetContractSize(symbol string) float64 {
+	// Major coins - standard MEXC contract sizes
+	if symbol == "BTCUSDT" {
+		return 0.001  // 1 contract = 0.001 BTC
+	}
+	if symbol == "ETHUSDT" {
+		return 0.01   // 1 contract = 0.01 ETH
+	}
+	// Default for small-cap altcoins (MYX, PIPPIN, etc.)
+	// Based on your data: CloseVol=2, OpenAvgPrice=0.393, Volume=7.90
+	// 7.90 = 2 × 0.393 × contractSize
+	// contractSize = 7.90 / (2 × 0.393) ≈ 10
+	return 10.0
 }
 
 var _ ExchangeClient = (*MEXClient)(nil)

@@ -29,8 +29,8 @@ func (h *TestHandler) GenerateTestPositions(w http.ResponseWriter, r *http.Reque
 
 	// Generate 100 test positions
 	var positions []model.Position
-	exchanges := []string{"bybit", "mexc", "gate", "bitget"}
-	symbols := []string{"BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "ADAUSDT", "DOGEUSDT", "MATICUSDT"}
+	exchanges := []string{"bybit", "mexc"}
+	symbols := []string{"BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT"}
 	sides := []string{"Buy", "Sell"}
 
 	rand.Seed(time.Now().UnixNano())
@@ -46,9 +46,6 @@ func (h *TestHandler) GenerateTestPositions(w http.ResponseWriter, r *http.Reque
 		// Random leverage between 1 and 20
 		leverage := rand.Intn(20) + 1
 		
-		// Margin = Volume / Leverage
-		margin := volume / float64(leverage)
-		
 		// Random PnL between -500 and 1000
 		pnl := float64(rand.Intn(1500) - 500)
 		
@@ -61,7 +58,6 @@ func (h *TestHandler) GenerateTestPositions(w http.ResponseWriter, r *http.Reque
 			Exchange:  exchange,
 			Symbol:    symbol,
 			Volume:    volume,
-			Margin:    margin,
 			Leverage:  leverage,
 			ClosedPnl: pnl,
 			Side:      side,
