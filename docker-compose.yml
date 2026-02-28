@@ -3,16 +3,17 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: budget-tracker-db
+    env_file: .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 7893
-      POSTGRES_DB: BudgetTracker
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-CHANGE_ME}
+      POSTGRES_DB: ${DB_NAME:-BudgetTracker}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -23,17 +24,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: budget-tracker-backend
+    env_file: .env
     environment:
       DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: 7893
-      DB_NAME: BudgetTracker
-      DB_SSL_MODE: disable
-      BYBIT_API_KEY: ${BYBIT_API_KEY:-}
-      BYBIT_SECRET_KEY: ${BYBIT_SECRET_KEY:-}
-      MEXC_API_KEY: ${MEXC_API_KEY:-}
-      MEXC_SECRET_KEY: ${MEXC_SECRET_KEY:-}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-CHANGE_ME}
+      DB_NAME: ${DB_NAME:-BudgetTracker}
+      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
     ports:
       - "8080:8080"
     depends_on:

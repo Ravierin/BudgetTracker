@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -21,20 +21,18 @@ FROM alpine:latest
 
 WORKDIR /app
 
-# Install ca-certificates for HTTPS
-RUN apk --no-cache add ca-certificates
+# Install ca-certificates for HTTPS and postgresql-client for migrations
+RUN apk --no-cache add ca-certificates postgresql-client
 
 # Copy binary from builder
 COPY --from=builder /app/budget-tracker .
 
-# Copy migrations
-COPY --from=builder /app/migrations ./migrations
-
-# Copy .env.example as template
-COPY --from=builder /app/.env.example .env
+# Copy entrypoint script
+COPY --from=builder /app/entrypoint.sh .
+RUN chmod +x /app/entrypoint.sh
 
 # Expose port
 EXPOSE 8080
 
-# Run application
-CMD ["./budget-tracker"]
+# Run entrypoint script
+CMD ["./entrypoint.sh"]
