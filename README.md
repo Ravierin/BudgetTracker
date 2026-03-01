@@ -139,22 +139,5 @@ BudgetTracker/
 - 🔒 Use **Read-Only** permissions for API keys
 - 🔐 Keys are masked in API responses
 
-### Performance
 
-- 🚀 Initial Sync: ~1-2 minutes to load 2 years of history
-- ⚡ Auto Sync: every 30 seconds (fast, only new data)
-- 💾 DB: ~1000 positions = ~1MB
-
-## 📞 Contacts
-
-- GitHub: [@Ravierin](https://github.com/Ravierin)
-- Telegram: [@fiend_scissors](https://t.me/fiend_scissors)
-
----
-
-## 📄 License
-
-MIT License
-
-**BudgetTracker** - keeping it simple 📊
 
